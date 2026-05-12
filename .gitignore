@@ -1,0 +1,23 @@
+# Entorno Virtual
+venv/
+ENV/
+env/
+
+# Variables de Entorno (SEGURIDAD)
+
+# Archivos temporales de Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Carpetas de VS Code
+.vscode/
+
+# Distribución / Paquetes
+dist/
+build/
+*.egg-info/
+
+# Archivos de sistema
+Thumbs.db
+.DS_Store
