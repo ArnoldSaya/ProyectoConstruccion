@@ -11,6 +11,8 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    
+
     # 1. Inicializar PostgreSQL
     db.init_app(app)
 
@@ -20,13 +22,14 @@ def create_app():
     mongo_db = mongo_client.get_database() 
 
     with app.app_context():
-        # Importar y registrar las rutas AQUÍ ADENTRO
+        # Importamos los Blueprints
         from .routes.auth_routes import auth_bp
+        from .routes.product_routes import product_bp # <-- Nueva línea
         
-        # Ahora 'app' sí existe en este contexto
+        # Registramos los Blueprints
         app.register_blueprint(auth_bp, url_prefix='/api/auth')
+        app.register_blueprint(product_bp, url_prefix='/api') # <-- Nueva línea
 
-        # Crear tablas si no existen
         db.create_all()
 
     return app
