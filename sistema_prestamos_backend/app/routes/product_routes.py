@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from app.models.mongo_models import CategoryModel, ProductModel
+from app import mongo_db
 
 product_bp = Blueprint('products', __name__)
 
@@ -39,3 +40,28 @@ def add_product():
         return jsonify({"message": "Producto publicado", "id": product_id}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 400
+    
+@product_bp.route("/testmongo")
+def testmongo():
+    mongo_db.test.insert_one({"ok": True})
+    return {"msg": "Mongo Railway OK"}
+@product_bp.route('/products', methods=['GET'])
+def get_products():
+
+    products_cursor = mongo_db.products.find()
+
+    result = []
+
+    for product in products_cursor:
+
+        result.append({
+            "_id": str(product['_id']),
+            "owner_id": product.get('owner_id'),
+            "name_prod": product.get('name_prod'),
+            "description": product.get('description'),
+            "category_id": str(product.get('category_id')),
+            "price": product.get('price'),
+            "details": product.get('details')
+        })
+
+    return jsonify(result), 200

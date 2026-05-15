@@ -3,13 +3,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
 class Config:
-    # Clave de seguridad para sesiones y tokens
+
+    # ==================================
+    # CLAVE SECRETA
+    # ==================================
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'clave-secreta'
-    
-    # URL de conexión para PostgreSQL
+
+    # ==================================
+    # POSTGRESQL
+    # ==================================
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
-    # URI de conexión para MongoDB
+
+    # SSL PARA RENDER / RAILWAY / NUBE
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "connect_args": {
+            "sslmode": "require"
+        }
+    }
+
+    # ==================================
+    # MONGODB
+    # ==================================
     MONGO_URI = os.environ.get('MONGO_URI')
