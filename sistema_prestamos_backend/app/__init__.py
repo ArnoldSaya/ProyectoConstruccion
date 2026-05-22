@@ -78,25 +78,6 @@ def create_app():
         app.register_blueprint(point_bp, url_prefix='/api')
 
         # ==================================
-        # CREAR TABLAS SQL
-        # ==================================
-        db.create_all()
-
-        # ==================================
-        # MIGRACIONES AUTOMATICAS
-        # ==================================
-        try:
-            from sqlalchemy import inspect as sa_inspect
-            inspector = sa_inspect(db.engine)
-            columns = [c['name'] for c in inspector.get_columns('users')]
-            if 'password_hash' not in columns:
-                db.session.execute(db.text('ALTER TABLE users ADD COLUMN password_hash VARCHAR(256) NOT NULL DEFAULT \'\''))
-                db.session.commit()
-                print("[OK] Columna password_hash agregada a users")
-        except Exception as e:
-            print("[INFO] Migracion automatica:", e)
-
-        # ==================================
         # SEMILLA DE ROLES
         # ==================================
         try:
