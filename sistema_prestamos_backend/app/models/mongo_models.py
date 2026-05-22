@@ -4,6 +4,9 @@ from app import mongo_db  # Importamos la conexión a Mongo que creaste en __ini
 class CategoryModel:
     @staticmethod
     def create_category(name_cat, description):
+        existing = mongo_db.categories.find_one({"name_cat": name_cat})
+        if existing:
+            raise ValueError("Ya existe una categoria con ese nombre")
         category_data = {
             "name_cat": name_cat,
             "description": description

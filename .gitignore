@@ -4,6 +4,13 @@ ENV/
 env/
 
 # Variables de Entorno (SEGURIDAD)
+.env
+*.env
+
+# Documentos generados
+*.docx
+generate_docx.py
+test_*.py
 
 # Archivos temporales de Python
 __pycache__/

@@ -1,97 +1,83 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from app.models.user_role import UserRole
 from app.models.user import User
 from app.models.role import Role
 from app import db
+from app.utils import validate_required, paginate, error_response
 
 user_role_bp = Blueprint('user_roles', __name__)
 
-# ASIGNAR ROL
-@user_role_bp.route('/user-roles', methods=['POST'])
-def assign_role():
 
+@user_role_bp.route('/user-roles', methods=['POST'])
+@jwt_required()
+def assign_role():
     data = request.get_json()
+    if not data:
+        return error_response("Datos JSON requeridos")
+
+    err = validate_required(data, ['user_id', 'role_id'])
+    if err:
+        return jsonify(err), 400
 
     try:
-
-        # VALIDAR USUARIO
-        user = User.query.get(
-            data['user_id']
-        )
-
+        user = User.query.get(data['user_id'])
         if not user:
-            return jsonify({
-                "error": "Usuario no encontrado"
-            }), 404
+            return error_response("Usuario no encontrado", 404)
 
-        # VALIDAR ROL
-        role = Role.query.get(
-            data['role_id']
-        )
-
+        role = Role.query.get(data['role_id'])
         if not role:
-            return jsonify({
-                "error": "Rol no encontrado"
-            }), 404
+            return error_response("Rol no encontrado", 404)
 
-        # VALIDAR DUPLICADO
-        existing_role = UserRole.query.filter_by(
-            user_id=data['user_id'],
-            role_id=data['role_id']
-        ).first()
+        existing = UserRole.query.filter_by(user_id=data['user_id'], role_id=data['role_id']).first()
+        if existing:
+            return error_response("El usuario ya tiene este rol", 400)
 
-        if existing_role:
-            return jsonify({
-                "error": "El usuario ya tiene este rol"
-            }), 400
-
-        user_role = UserRole(
-            user_id=data['user_id'],
-            role_id=data['role_id']
-        )
-
+        user_role = UserRole(user_id=data['user_id'], role_id=data['role_id'])
         db.session.add(user_role)
         db.session.commit()
 
-        return jsonify({
-            "message": "Rol asignado",
-            "id": user_role.id
-        }), 201
+        return jsonify({"message": "Rol asignado", "id": user_role.id}), 201
 
     except Exception as e:
-        return jsonify({
-            "error": str(e)
-        }), 400
+        return error_response(str(e), 400)
 
 
-# LISTAR ROLES
 @user_role_bp.route('/user-roles', methods=['GET'])
 def get_roles():
-
-    roles = UserRole.query.all()
-
-    result = []
-
-    for role in roles:
-        result.append({
-            "id": role.id,
-            "user_id": role.user_id,
-            "role_id": role.role_id,
-            "assigned_at": role.assigned_at
+    result = paginate(UserRole.query.order_by(UserRole.assigned_at.desc()))
+    items = []
+    for ur in result["items"]:
+        items.append({
+            "id": ur.id,
+            "user_id": ur.user_id,
+            "role_id": ur.role_id,
+            "assigned_at": ur.assigned_at.isoformat() if ur.assigned_at else None
         })
+    return jsonify({"data": items, "page": result["page"], "per_page": result["per_page"],
+                    "total": result["total"], "pages": result["pages"]}), 200
 
-    return jsonify(result), 200
+
+@user_role_bp.route('/user-roles/user/<int:user_id>', methods=['GET'])
+def get_user_roles(user_id):
+    result = paginate(UserRole.query.filter_by(user_id=user_id).order_by(UserRole.assigned_at.desc()))
+    items = []
+    for ur in result["items"]:
+        role = Role.query.get(ur.role_id)
+        items.append({
+            "id": ur.id,
+            "role_id": ur.role_id,
+            "role_name": role.role_name if role else None,
+            "assigned_at": ur.assigned_at.isoformat() if ur.assigned_at else None
+        })
+    return jsonify({"data": items, "page": result["page"], "per_page": result["per_page"],
+                    "total": result["total"], "pages": result["pages"]}), 200
 
 
-# ELIMINAR ROL
 @user_role_bp.route('/user-roles/<int:id>', methods=['DELETE'])
+@jwt_required()
 def delete_role(id):
-
     role = UserRole.query.get_or_404(id)
-
     db.session.delete(role)
     db.session.commit()
-
-    return jsonify({
-        "message": "Rol eliminado"
-    }), 200
+    return jsonify({"message": "Rol eliminado"}), 200

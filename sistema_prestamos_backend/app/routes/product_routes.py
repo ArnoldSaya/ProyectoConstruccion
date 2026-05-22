@@ -1,67 +1,144 @@
+from bson.objectid import ObjectId
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from app.models.mongo_models import CategoryModel, ProductModel
-from app import mongo_db
+from app.models.role import Role
+from app.models.user_role import UserRole
+from app import db, mongo_db
+from app.utils import validate_required, error_response
 
 product_bp = Blueprint('products', __name__)
 
-# --- RUTAS PARA CATEGORÍAS ---
+
 @product_bp.route('/categories', methods=['POST'])
+@jwt_required()
 def add_category():
     data = request.get_json()
+    if not data:
+        return error_response("Datos JSON requeridos")
+
+    err = validate_required(data, ['name_cat', 'description'])
+    if err:
+        return jsonify(err), 400
+
     try:
-        # Usamos el modelo de Mongo para insertar
         category_id = CategoryModel.create_category(
             name_cat=data['name_cat'],
             description=data['description']
         )
-        return jsonify({"message": "Categoría creada", "id": category_id}), 201
+        return jsonify({"message": "Categoria creada", "id": category_id}), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
+        return error_response(str(e), 400)
+
 
 @product_bp.route('/categories', methods=['GET'])
 def list_categories():
-    categories = CategoryModel.get_all_categories()
-    return jsonify(categories), 200
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    skip = (page - 1) * per_page
 
-# --- RUTAS PARA PRODUCTOS ---
+    total = mongo_db.categories.count_documents({})
+    categories = list(mongo_db.categories.find().skip(skip).limit(per_page))
+
+    for cat in categories:
+        cat['_id'] = str(cat['_id'])
+
+    return jsonify({
+        "data": categories,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "pages": (total + per_page - 1) // per_page if total > 0 else 0
+    }), 200
+
+
 @product_bp.route('/products', methods=['POST'])
+@jwt_required()
 def add_product():
     data = request.get_json()
+    if not data:
+        return error_response("Datos JSON requeridos")
+
+    err = validate_required(data, ['owner_id', 'name_prod', 'description', 'category_id', 'price'])
+    if err:
+        return jsonify(err), 400
+
     try:
-        # El owner_id debe ser un ID válido de tu PostgreSQL
         product_id = ProductModel.create_product(
-            owner_id=data['owner_id'], 
+            owner_id=data['owner_id'],
             name_prod=data['name_prod'],
             description=data['description'],
             category_id=data['category_id'],
             price=data['price'],
-            details=data['details']
+            details=data.get('details')
         )
+
+        # Cambiar rol a "rentador" si aun no lo tiene
+        rol_rentador = Role.query.filter_by(role_name='rentador').first()
+        if rol_rentador:
+            tiene_rol = UserRole.query.filter_by(
+                user_id=data['owner_id'], role_id=rol_rentador.id
+            ).first()
+            if not tiene_rol:
+                ur = UserRole(user_id=data['owner_id'], role_id=rol_rentador.id)
+                db.session.add(ur)
+                db.session.commit()
+
         return jsonify({"message": "Producto publicado", "id": product_id}), 201
     except Exception as e:
-        return jsonify({"error": str(e)}), 400
-    
-@product_bp.route("/testmongo")
-def testmongo():
-    mongo_db.test.insert_one({"ok": True})
-    return {"msg": "Mongo Railway OK"}
+        return error_response(str(e), 400)
+
+
 @product_bp.route('/products', methods=['GET'])
 def get_products():
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 10, type=int)
+    skip = (page - 1) * per_page
+    category_id = request.args.get('category_id')
 
-    products_cursor = mongo_db.products.find()
+    query = {}
+    if category_id:
+        query["category_id"] = ObjectId(category_id)
+
+    total = mongo_db.products.count_documents(query)
+    products_cursor = mongo_db.products.find(query).skip(skip).limit(per_page)
 
     result = []
-
     for product in products_cursor:
-
         result.append({
             "_id": str(product['_id']),
             "owner_id": product.get('owner_id'),
             "name_prod": product.get('name_prod'),
             "description": product.get('description'),
-            "category_id": str(product.get('category_id')),
+            "category_id": str(product.get('category_id')) if product.get('category_id') else None,
             "price": product.get('price'),
-            "details": product.get('details')
+            "details": product.get('details'),
+            "status": product.get('status', 'disponible')
         })
 
-    return jsonify(result), 200
+    return jsonify({
+        "data": result,
+        "page": page,
+        "per_page": per_page,
+        "total": total,
+        "pages": (total + per_page - 1) // per_page if total > 0 else 0
+    }), 200
+
+
+@product_bp.route('/products/<string:product_id>', methods=['GET'])
+def get_product(product_id):
+    try:
+        product = mongo_db.products.find_one({"_id": ObjectId(product_id)})
+        if not product:
+            return error_response("Producto no encontrado", 404)
+        product['_id'] = str(product['_id'])
+        product['category_id'] = str(product['category_id']) if product.get('category_id') else None
+        return jsonify(product), 200
+    except Exception as e:
+        return error_response(str(e), 400)
+
+
+@product_bp.route("/testmongo")
+def testmongo():
+    mongo_db.test.insert_one({"ok": True})
+    return {"msg": "Mongo Railway OK"}

@@ -1,140 +1,99 @@
 from flask import Blueprint, request, jsonify
+from flask_jwt_extended import jwt_required
 from app.models.user import User
-from app import db
+from app.models.role import Role
+from app.models.user_role import UserRole
+from app.models import db
+from app.utils import validate_required, paginate, error_response
 
 user_bp = Blueprint('users', __name__)
 
-# CREAR USUARIO
-@user_bp.route('/users', methods=['POST'])
-def create_user():
 
+@user_bp.route('/users', methods=['POST'])
+@jwt_required()
+def create_user():
     data = request.get_json()
+    if not data:
+        return error_response("Datos JSON requeridos")
+
+    err = validate_required(data, ['full_name', 'email', 'password'])
+    if err:
+        return jsonify(err), 400
 
     try:
-
-        # VALIDAR EMAIL ÚNICO
-        existing_user = User.query.filter_by(
-            email=data['email']
-        ).first()
-
+        existing_user = User.query.filter_by(email=data['email']).first()
         if existing_user:
-            return jsonify({
-                "error": "El email ya está registrado"
-            }), 400
+            return error_response("El email ya esta registrado", 400)
 
         user = User(
             full_name=data['full_name'],
             email=data['email'],
             phone=data.get('phone')
         )
-
+        user.set_password(data['password'])
         db.session.add(user)
+        db.session.flush()
+
+        rol_cliente = Role.query.filter_by(role_name='cliente').first()
+        if rol_cliente:
+            ur = UserRole(user_id=user.id, role_id=rol_cliente.id)
+            db.session.add(ur)
+
         db.session.commit()
 
-        return jsonify({
-            "message": "Usuario creado",
-            "id": user.id
-        }), 201
+        return jsonify({"message": "Usuario creado", "id": user.id}), 201
 
     except Exception as e:
-        return jsonify({
-            "error": str(e)
-        }), 400
+        return error_response(str(e), 400)
 
 
-# LISTAR USUARIOS
 @user_bp.route('/users', methods=['GET'])
 def get_users():
-
-    users = User.query.all()
-
-    result = []
-
-    for user in users:
-        result.append({
-            "id": user.id,
-            "full_name": user.full_name,
-            "email": user.email,
-            "phone": user.phone,
-            "reputation_score": float(user.reputation_score),
-            "created_at": user.created_at
-        })
-
-    return jsonify(result), 200
+    result = paginate(User.query.order_by(User.created_at.desc()))
+    items = [u.to_dict() for u in result["items"]]
+    return jsonify({"data": items, "page": result["page"], "per_page": result["per_page"],
+                    "total": result["total"], "pages": result["pages"]}), 200
 
 
-# OBTENER USUARIO
 @user_bp.route('/users/<int:id>', methods=['GET'])
 def get_user(id):
-
     user = User.query.get_or_404(id)
-
-    return jsonify({
-        "id": user.id,
-        "full_name": user.full_name,
-        "email": user.email,
-        "phone": user.phone,
-        "reputation_score": float(user.reputation_score)
-    }), 200
+    return jsonify(user.to_dict()), 200
 
 
-# ACTUALIZAR USUARIO
 @user_bp.route('/users/<int:id>', methods=['PUT'])
+@jwt_required()
 def update_user(id):
-
     user = User.query.get_or_404(id)
-
     data = request.get_json()
+    if not data:
+        return error_response("Datos JSON requeridos")
 
     try:
-
         if 'email' in data:
-
-            existing_user = User.query.filter_by(
-                email=data['email']
-            ).first()
-
+            existing_user = User.query.filter_by(email=data['email']).first()
             if existing_user and existing_user.id != id:
-                return jsonify({
-                    "error": "El email ya está en uso"
-                }), 400
+                return error_response("El email ya esta en uso", 400)
+            user.email = data['email']
 
-        user.full_name = data.get(
-            'full_name',
-            user.full_name
-        )
-
-        user.email = data.get(
-            'email',
-            user.email
-        )
-
-        user.phone = data.get(
-            'phone',
-            user.phone
-        )
+        if 'full_name' in data:
+            user.full_name = data['full_name']
+        if 'phone' in data:
+            user.phone = data['phone']
+        if 'password' in data:
+            user.set_password(data['password'])
 
         db.session.commit()
-
-        return jsonify({
-            "message": "Usuario actualizado"
-        }), 200
+        return jsonify({"message": "Usuario actualizado"}), 200
 
     except Exception as e:
-        return jsonify({
-            "error": str(e)
-        }), 400
+        return error_response(str(e), 400)
 
 
-# ELIMINAR USUARIO
 @user_bp.route('/users/<int:id>', methods=['DELETE'])
+@jwt_required()
 def delete_user(id):
-
     user = User.query.get_or_404(id)
-
     db.session.delete(user)
     db.session.commit()
-
-    return jsonify({
-        "message": "Usuario eliminado"
-    }), 200
+    return jsonify({"message": "Usuario eliminado"}), 200

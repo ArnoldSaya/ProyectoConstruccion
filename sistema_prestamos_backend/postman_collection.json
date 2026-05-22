@@ -1,0 +1,531 @@
+{
+  "info": {
+    "name": "Sistema Prestamos API",
+    "description": "Coleccion completa de endpoints del backend. Usar variable {{base_url}} = http://127.0.0.1:5000/api. El login automatico asigna el token a {{jwt_token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:5000/api" },
+    { "key": "jwt_token", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{jwt_token}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Registrar usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', json.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Usuario Test\",\n  \"email\": \"test@ejemplo.com\",\n  \"password\": \"123456\",\n  \"phone\": \"999888777\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"]}
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('jwt_token', json.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test@ejemplo.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"]}
+          }
+        },
+        {
+          "name": "Mi perfil (requiere token)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Usuarios",
+      "item": [
+        {
+          "name": "Listar usuarios (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/users?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["users"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Obtener usuario por ID",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/users/1", "host": ["{{base_url}}"], "path": ["users", "1"]}
+          }
+        },
+        {
+          "name": "Crear usuario (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Nuevo Usuario\",\n  \"email\": \"nuevo@ejemplo.com\",\n  \"password\": \"123456\",\n  \"phone\": \"111222333\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/users", "host": ["{{base_url}}"], "path": ["users"]}
+          }
+        },
+        {
+          "name": "Actualizar usuario (requiere token)",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Nombre Actualizado\",\n  \"phone\": \"444555666\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/users/1", "host": ["{{base_url}}"], "path": ["users", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar usuario (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/users/1", "host": ["{{base_url}}"], "path": ["users", "1"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Productos y Categorias (MongoDB)",
+      "item": [
+        {
+          "name": "Listar categorias (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/categories?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["categories"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Crear categoria (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name_cat\": \"Electronica\",\n  \"description\": \"Productos electronicos en general\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"]}
+          }
+        },
+        {
+          "name": "Listar productos (paginado + filtro)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/products?page=1&per_page=10&category_id=ID_CATEGORIA", "host": ["{{base_url}}"], "path": ["products"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}, {"key": "category_id", "value": "ID_CATEGORIA"}
+            ]}
+          }
+        },
+        {
+          "name": "Obtener producto por ID",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/products/ID_PRODUCTO", "host": ["{{base_url}}"], "path": ["products", "ID_PRODUCTO"]}
+          }
+        },
+        {
+          "name": "Crear producto (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"owner_id\": 1,\n  \"name_prod\": \"Laptop HP\",\n  \"description\": \"Laptop para trabajo\",\n  \"category_id\": \"ID_CATEGORIA\",\n  \"price\": 1500.00,\n  \"details\": \"16GB RAM, 512GB SSD\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/products", "host": ["{{base_url}}"], "path": ["products"]}
+          }
+        },
+        {
+          "name": "Test MongoDB connection",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/testmongo", "host": ["{{base_url}}"], "path": ["testmongo"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ubicaciones",
+      "item": [
+        {
+          "name": "Listar ubicaciones (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/locations?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["locations"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Crear ubicacion (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"location_name\": \"Oficina Central\",\n  \"address\": \"Av. Principal 123\",\n  \"city\": \"Lima\",\n  \"latitude\": -12.046374,\n  \"longitude\": -77.042793,\n  \"is_meeting_point\": true\n}"
+            },
+            "url": {"raw": "{{base_url}}/locations", "host": ["{{base_url}}"], "path": ["locations"]}
+          }
+        },
+        {
+          "name": "Ubicaciones por usuario",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/locations/user/1", "host": ["{{base_url}}"], "path": ["locations", "user", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar ubicacion (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/locations/1", "host": ["{{base_url}}"], "path": ["locations", "1"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "Listar roles asignados (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/user-roles?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["user-roles"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Asignar rol (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"role_id\": 1\n}"
+            },
+            "url": {"raw": "{{base_url}}/user-roles", "host": ["{{base_url}}"], "path": ["user-roles"]}
+          }
+        },
+        {
+          "name": "Roles por usuario",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/user-roles/user/1", "host": ["{{base_url}}"], "path": ["user-roles", "user", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar rol (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/user-roles/1", "host": ["{{base_url}}"], "path": ["user-roles", "1"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favoritos",
+      "item": [
+        {
+          "name": "Listar favoritos (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/favorites?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["favorites"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Agregar favorito (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"mongo_product_id\": \"ID_PRODUCTO_MONGO\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/favorites", "host": ["{{base_url}}"], "path": ["favorites"]}
+          }
+        },
+        {
+          "name": "Favoritos por usuario",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/favorites/user/1", "host": ["{{base_url}}"], "path": ["favorites", "user", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar favorito (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/favorites/1", "host": ["{{base_url}}"], "path": ["favorites", "1"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reservas",
+      "item": [
+        {
+          "name": "Listar reservas (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/reservations?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["reservations"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Crear reserva (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"renter_user_id\": 1,\n  \"mongo_product_id\": \"ID_PRODUCTO_MONGO\",\n  \"start_date\": \"2026-06-01\",\n  \"end_date\": \"2026-06-05\",\n  \"total_price\": 500.00,\n  \"pickup_location_id\": 1\n}"
+            },
+            "url": {"raw": "{{base_url}}/reservations", "host": ["{{base_url}}"], "path": ["reservations"]}
+          }
+        },
+        {
+          "name": "Obtener reserva por ID",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"]}
+          }
+        },
+        {
+          "name": "Actualizar reserva (requiere token)",
+          "request": {
+            "method": "PUT",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"confirmed\",\n  \"total_price\": 450.00\n}"
+            },
+            "url": {"raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"]}
+          }
+        },
+        {
+          "name": "Reservas por usuario",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/reservations/user/1", "host": ["{{base_url}}"], "path": ["reservations", "user", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar reserva (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pagos",
+      "item": [
+        {
+          "name": "Listar pagos (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/payments?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["payments"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Crear pago (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservation_id\": 1,\n  \"amount\": 500.00,\n  \"payment_status\": \"completed\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/payments", "host": ["{{base_url}}"], "path": ["payments"]}
+          }
+        },
+        {
+          "name": "Obtener pago por ID",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/payments/1", "host": ["{{base_url}}"], "path": ["payments", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar pago (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/payments/1", "host": ["{{base_url}}"], "path": ["payments", "1"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Facturas",
+      "item": [
+        {
+          "name": "Listar facturas (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/invoices?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["invoices"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Crear factura (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"payment_id\": 1,\n  \"subtotal\": 450.00,\n  \"platform_fee\": 25.00,\n  \"owner_earnings\": 380.00,\n  \"taxes\": 45.00,\n  \"total\": 500.00\n}"
+            },
+            "url": {"raw": "{{base_url}}/invoices", "host": ["{{base_url}}"], "path": ["invoices"]}
+          }
+        },
+        {
+          "name": "Obtener factura por ID",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/invoices/1", "host": ["{{base_url}}"], "path": ["invoices", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar factura (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/invoices/1", "host": ["{{base_url}}"], "path": ["invoices", "1"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Resenas",
+      "item": [
+        {
+          "name": "Listar resenas (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/reviews?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["reviews"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Crear resena (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservation_id\": 1,\n  \"reviewer_id\": 1,\n  \"reviewed_user_id\": 2,\n  \"rating\": 5,\n  \"comment\": \"Excelente servicio\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/reviews", "host": ["{{base_url}}"], "path": ["reviews"]}
+          }
+        },
+        {
+          "name": "Resenas por usuario",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/reviews/user/1", "host": ["{{base_url}}"], "path": ["reviews", "user", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar resena (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/reviews/1", "host": ["{{base_url}}"], "path": ["reviews", "1"]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Puntos",
+      "item": [
+        {
+          "name": "Listar puntos (paginado)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/points?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["points"], "query": [
+              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
+            ]}
+          }
+        },
+        {
+          "name": "Agregar puntos (requiere token)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": 1,\n  \"points_earned\": 50,\n  \"reason\": \"Reserva completada\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/points", "host": ["{{base_url}}"], "path": ["points"]}
+          }
+        },
+        {
+          "name": "Puntos por usuario (con total)",
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/points/user/1", "host": ["{{base_url}}"], "path": ["points", "user", "1"]}
+          }
+        },
+        {
+          "name": "Eliminar puntos (requiere token)",
+          "request": {
+            "method": "DELETE",
+            "url": {"raw": "{{base_url}}/points/1", "host": ["{{base_url}}"], "path": ["points", "1"]}
+          }
+        }
+      ]
+    }
+  ]
+}

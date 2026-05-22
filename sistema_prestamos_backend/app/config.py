@@ -29,3 +29,9 @@ class Config:
     # MONGODB
     # ==================================
     MONGO_URI = os.environ.get('MONGO_URI')
+
+    # ==================================
+    # JWT
+    # ==================================
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY') or os.environ.get('SECRET_KEY')
+    JWT_ACCESS_TOKEN_EXPIRES = 86400  # 24 horas en segundos
