@@ -1,12 +1,24 @@
 {
   "info": {
-    "name": "Sistema Prestamos API",
-    "description": "Coleccion completa de endpoints del backend. Usar variable {{base_url}} = http://127.0.0.1:5000/api. El login automatico asigna el token a {{jwt_token}}.",
+    "name": "Sistema Prestamos API - Pruebas Completa",
+    "description": "Coleccion completa con tests automatizados. Flujo: Auth → Usuarios → Categorias → Productos → Ubicaciones → Roles → Favoritos → Reservas → Pagos → Facturas → Reseñas → Puntos. Las variables se auto-asignan. Usar {{base_url}} = http://127.0.0.1:5000/api",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
-    { "key": "base_url", "value": "http://127.0.0.1:5000/api" },
-    { "key": "jwt_token", "value": "" }
+    { "key": "base_url", "value": "http://127.0.0.1:5000/api", "type": "string" },
+    { "key": "jwt_token", "value": "" },
+    { "key": "user_id", "value": 1 },
+    { "key": "user_id_2", "value": 2 },
+    { "key": "category_id", "value": "" },
+    { "key": "product_id", "value": "" },
+    { "key": "location_id", "value": 1 },
+    { "key": "user_role_id", "value": 1 },
+    { "key": "favorite_id", "value": 1 },
+    { "key": "reservation_id", "value": 1 },
+    { "key": "payment_id", "value": 1 },
+    { "key": "invoice_id", "value": 1 },
+    { "key": "review_id", "value": 1 },
+    { "key": "point_id", "value": 1 }
   ],
   "auth": {
     "type": "bearer",
@@ -14,19 +26,37 @@
   },
   "item": [
     {
-      "name": "Auth",
+      "name": "01 - Auth",
+      "description": "Registro, inicio de sesion y perfil. El token JWT se asigna automaticamente a {{jwt_token}}.",
       "item": [
         {
-          "name": "Registrar usuario",
+          "name": "Registrar usuario principal",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 201) {",
-                  "    var json = pm.response.json();",
-                  "    pm.collectionVariables.set('jwt_token', json.token);",
-                  "}"
+                  "pm.test('Status 201 - Usuario registrado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene token y usuario', function() {",
+                  "    pm.expect(json).to.have.property('token');",
+                  "    pm.expect(json).to.have.property('user');",
+                  "    pm.expect(json.user).to.have.property('id');",
+                  "    pm.expect(json.user).to.have.property('full_name');",
+                  "    pm.expect(json.user).to.have.property('email');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('jwt_token', json.token);",
+                  "pm.collectionVariables.set('user_id', json.user.id);",
+                  "",
+                  "pm.test('Token JWT asignado correctamente', function() {",
+                  "    pm.expect(json.token).to.not.be.empty;",
+                  "});",
+                  "",
+                  "console.log('Usuario registrado ID: ' + json.user.id);"
                 ]
               }
             }
@@ -36,9 +66,39 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Usuario Test\",\n  \"email\": \"test@ejemplo.com\",\n  \"password\": \"123456\",\n  \"phone\": \"999888777\"\n}"
+              "raw": "{\n  \"full_name\": \"Usuario Principal\",\n  \"email\": \"principal@ejemplo.com\",\n  \"password\": \"123456\",\n  \"phone\": \"999888777\"\n}"
             },
-            "url": {"raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"]}
+            "url": {"raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"]},
+            "description": "Registra un nuevo usuario. Asigna automaticamente rol 'cliente'. Devuelve JWT."
+          }
+        },
+        {
+          "name": "Registrar segundo usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Segundo usuario registrado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.collectionVariables.set('user_id_2', json.user.id);",
+                  "console.log('Segundo usuario ID: ' + json.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Segundo Usuario\",\n  \"email\": \"segundo@ejemplo.com\",\n  \"password\": \"123456\",\n  \"phone\": \"111222333\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"]},
+            "description": "Registra un segundo usuario para pruebas de interaccion."
           }
         },
         {
@@ -48,10 +108,21 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "if (pm.response.code === 200) {",
-                  "    var json = pm.response.json();",
-                  "    pm.collectionVariables.set('jwt_token', json.token);",
-                  "}"
+                  "pm.test('Status 200 - Login exitoso', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene token y usuario', function() {",
+                  "    pm.expect(json).to.have.property('token');",
+                  "    pm.expect(json).to.have.property('user');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('jwt_token', json.token);",
+                  "",
+                  "pm.test('Credenciales validas', function() {",
+                  "    pm.expect(json.user.email).to.eql('principal@ejemplo.com');",
+                  "});"
                 ]
               }
             }
@@ -61,86 +132,202 @@
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"test@ejemplo.com\",\n  \"password\": \"123456\"\n}"
+              "raw": "{\n  \"email\": \"principal@ejemplo.com\",\n  \"password\": \"123456\"\n}"
             },
-            "url": {"raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"]}
+            "url": {"raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"]},
+            "description": "Inicia sesion con credenciales. Devuelve nuevo JWT."
           }
         },
         {
-          "name": "Mi perfil (requiere token)",
+          "name": "Obtener mi perfil (token requerido)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Perfil obtenido', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Datos del perfil correctos', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('full_name');",
+                  "    pm.expect(json).to.have.property('email');",
+                  "    pm.expect(json.email).to.eql('principal@ejemplo.com');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"]}
+            "url": {"raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"]},
+            "description": "Obtiene los datos del usuario autenticado mediante JWT."
           }
         }
       ]
     },
     {
-      "name": "Usuarios",
+      "name": "02 - Usuarios CRUD",
+      "description": "Gestion de usuarios. Endpoints protegidos requieren JWT.",
       "item": [
         {
-          "name": "Listar usuarios (paginado)",
+          "name": "Listar todos los usuarios (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de usuarios', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json).to.have.property('page');",
+                  "    pm.expect(json).to.have.property('per_page');",
+                  "    pm.expect(json).to.have.property('total');",
+                  "    pm.expect(json).to.have.property('pages');",
+                  "});",
+                  "",
+                  "pm.test('Data es un arreglo', function() {",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {"raw": "{{base_url}}/users?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["users"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todos los usuarios registrados."
           }
         },
         {
           "name": "Obtener usuario por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Usuario encontrado', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Datos del usuario correctos', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('full_name');",
+                  "    pm.expect(json).to.have.property('email');",
+                  "    pm.expect(json.id).to.eql(parseInt(pm.collectionVariables.get('user_id')));",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/users/1", "host": ["{{base_url}}"], "path": ["users", "1"]}
+            "url": {"raw": "{{base_url}}/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["users", "{{user_id}}"]},
+            "description": "Obtiene un usuario especifico por su ID."
           }
         },
         {
-          "name": "Crear usuario (requiere token)",
+          "name": "Crear usuario nuevo (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Usuario creado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene mensaje e ID', function() {",
+                  "    pm.expect(json).to.have.property('message');",
+                  "    pm.expect(json).to.have.property('id');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('user_id_3', json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Nuevo Usuario\",\n  \"email\": \"nuevo@ejemplo.com\",\n  \"password\": \"123456\",\n  \"phone\": \"111222333\"\n}"
+              "raw": "{\n  \"full_name\": \"Tercer Usuario\",\n  \"email\": \"tercero@ejemplo.com\",\n  \"password\": \"123456\",\n  \"phone\": \"444555666\"\n}"
             },
-            "url": {"raw": "{{base_url}}/users", "host": ["{{base_url}}"], "path": ["users"]}
+            "url": {"raw": "{{base_url}}/users", "host": ["{{base_url}}"], "path": ["users"]},
+            "description": "Crea un usuario directamente (requiere JWT)."
           }
         },
         {
-          "name": "Actualizar usuario (requiere token)",
+          "name": "Actualizar usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Usuario actualizado', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Contiene mensaje de confirmacion', function() {",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"full_name\": \"Nombre Actualizado\",\n  \"phone\": \"444555666\"\n}"
+              "raw": "{\n  \"full_name\": \"Usuario Principal Actualizado\",\n  \"phone\": \"999888777\"\n}"
             },
-            "url": {"raw": "{{base_url}}/users/1", "host": ["{{base_url}}"], "path": ["users", "1"]}
-          }
-        },
-        {
-          "name": "Eliminar usuario (requiere token)",
-          "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/users/1", "host": ["{{base_url}}"], "path": ["users", "1"]}
+            "url": {"raw": "{{base_url}}/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["users", "{{user_id}}"]},
+            "description": "Actualiza datos del usuario (nombre, telefono, etc)."
           }
         }
       ]
     },
     {
-      "name": "Productos y Categorias (MongoDB)",
+      "name": "03 - Categorias (MongoDB)",
+      "description": "Gestion de categorias de productos en MongoDB. Las categorias se crean primero para luego asociar productos.",
       "item": [
         {
-          "name": "Listar categorias (paginado)",
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/categories?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["categories"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
-          }
-        },
-        {
-          "name": "Crear categoria (requiere token)",
+          "name": "Crear categoria - Electronica",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Categoria creada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID de MongoDB', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('category_id', json.id);",
+                  "console.log('Categoria ID (MongoDB): ' + json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
@@ -148,381 +335,1148 @@
               "mode": "raw",
               "raw": "{\n  \"name_cat\": \"Electronica\",\n  \"description\": \"Productos electronicos en general\"\n}"
             },
-            "url": {"raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"]}
+            "url": {"raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"]},
+            "description": "Crea categoria 'Electronica' en MongoDB."
           }
         },
         {
-          "name": "Listar productos (paginado + filtro)",
+          "name": "Crear categoria - Hogar",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Categoria Hogar creada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.expect(json).to.have.property('id');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name_cat\": \"Hogar\",\n  \"description\": \"Articulos para el hogar\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"]},
+            "description": "Crea categoria 'Hogar' en MongoDB."
+          }
+        },
+        {
+          "name": "Listar todas las categorias (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de categorias', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    pm.expect(json).to.have.property('total');",
+                  "});",
+                  "",
+                  "pm.test('Categorias tienen campos requeridos', function() {",
+                  "    if (json.data.length > 0) {",
+                  "        pm.expect(json.data[0]).to.have.property('_id');",
+                  "        pm.expect(json.data[0]).to.have.property('name_cat');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/products?page=1&per_page=10&category_id=ID_CATEGORIA", "host": ["{{base_url}}"], "path": ["products"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}, {"key": "category_id", "value": "ID_CATEGORIA"}
-            ]}
+            "url": {"raw": "{{base_url}}/categories?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["categories"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de categorias disponibles."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 - Productos (MongoDB)",
+      "description": "Gestion de productos en MongoDB. Al crear un producto, el usuario obtiene rol 'rentador' automaticamente.",
+      "item": [
+        {
+          "name": "Crear producto - Laptop",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Producto creado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID de MongoDB', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "    pm.expect(json.message).to.eql('Producto publicado');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('product_id', json.id);",
+                  "console.log('Producto ID (MongoDB): ' + json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"owner_id\": {{user_id}},\n  \"name_prod\": \"Laptop HP\",\n  \"description\": \"Laptop para trabajo y estudio\",\n  \"category_id\": \"{{category_id}}\",\n  \"price\": 1500.00,\n  \"details\": \"16GB RAM, 512GB SSD, Intel i7\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/products", "host": ["{{base_url}}"], "path": ["products"]},
+            "description": "Publica un producto. Asigna rol 'rentador' al usuario si no lo tiene."
+          }
+        },
+        {
+          "name": "Crear producto - Taladro",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Producto creado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.expect(json).to.have.property('id');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"owner_id\": {{user_id}},\n  \"name_prod\": \"Taladro Inalambrico\",\n  \"description\": \"Taladro profesional 20V\",\n  \"category_id\": \"{{category_id}}\",\n  \"price\": 200.00,\n  \"details\": \"Bateria de litio, 2 velocidades\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/products", "host": ["{{base_url}}"], "path": ["products"]},
+            "description": "Publica un segundo producto del mismo usuario."
+          }
+        },
+        {
+          "name": "Listar todos los productos (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de productos', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    pm.expect(json).to.have.property('total');",
+                  "});",
+                  "",
+                  "pm.test('Productos tienen campos requeridos', function() {",
+                  "    if (json.data.length > 0) {",
+                  "        pm.expect(json.data[0]).to.have.property('_id');",
+                  "        pm.expect(json.data[0]).to.have.property('name_prod');",
+                  "        pm.expect(json.data[0]).to.have.property('price');",
+                  "        pm.expect(json.data[0]).to.have.property('owner_id');",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/products?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["products"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todos los productos disponibles."
           }
         },
         {
           "name": "Obtener producto por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Producto encontrado', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Datos del producto correctos', function() {",
+                  "    pm.expect(json).to.have.property('_id');",
+                  "    pm.expect(json).to.have.property('name_prod');",
+                  "    pm.expect(json).to.have.property('owner_id');",
+                  "    pm.expect(json).to.have.property('status');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/products/ID_PRODUCTO", "host": ["{{base_url}}"], "path": ["products", "ID_PRODUCTO"]}
+            "url": {"raw": "{{base_url}}/products/{{product_id}}", "host": ["{{base_url}}"], "path": ["products", "{{product_id}}"]},
+            "description": "Obtiene un producto especifico por su ID de MongoDB."
           }
         },
         {
-          "name": "Crear producto (requiere token)",
+          "name": "Filtrar productos por categoria",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Productos filtrados', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"owner_id\": 1,\n  \"name_prod\": \"Laptop HP\",\n  \"description\": \"Laptop para trabajo\",\n  \"category_id\": \"ID_CATEGORIA\",\n  \"price\": 1500.00,\n  \"details\": \"16GB RAM, 512GB SSD\"\n}"
-            },
-            "url": {"raw": "{{base_url}}/products", "host": ["{{base_url}}"], "path": ["products"]}
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/products?page=1&per_page=10&category_id={{category_id}}", "host": ["{{base_url}}"], "path": ["products"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"},
+              {"key": "category_id", "value": "{{category_id}}"}
+            ]},
+            "description": "Filtra productos por categoria especifica."
           }
         },
         {
-          "name": "Test MongoDB connection",
+          "name": "Test conexion MongoDB",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - MongoDB conectado', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.expect(json).to.have.property('msg');"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/testmongo", "host": ["{{base_url}}"], "path": ["testmongo"]}
+            "url": {"raw": "{{base_url}}/testmongo", "host": ["{{base_url}}"], "path": ["testmongo"]},
+            "description": "Verifica la conexion a MongoDB."
           }
         }
       ]
     },
     {
-      "name": "Ubicaciones",
+      "name": "05 - Ubicaciones",
+      "description": "Gestion de ubicaciones para recogida de productos.",
       "item": [
         {
-          "name": "Listar ubicaciones (paginado)",
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/locations?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["locations"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
-          }
-        },
-        {
-          "name": "Crear ubicacion (requiere token)",
+          "name": "Crear ubicacion - Oficina",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Ubicacion creada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('location_id', json.id);",
+                  "console.log('Ubicacion ID: ' + json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": 1,\n  \"location_name\": \"Oficina Central\",\n  \"address\": \"Av. Principal 123\",\n  \"city\": \"Lima\",\n  \"latitude\": -12.046374,\n  \"longitude\": -77.042793,\n  \"is_meeting_point\": true\n}"
+              "raw": "{\n  \"user_id\": {{user_id}},\n  \"location_name\": \"Oficina Central\",\n  \"address\": \"Av. Principal 123\",\n  \"city\": \"Lima\",\n  \"latitude\": -12.046374,\n  \"longitude\": -77.042793,\n  \"is_meeting_point\": true\n}"
             },
-            "url": {"raw": "{{base_url}}/locations", "host": ["{{base_url}}"], "path": ["locations"]}
+            "url": {"raw": "{{base_url}}/locations", "host": ["{{base_url}}"], "path": ["locations"]},
+            "description": "Crea una ubicacion de recogida para el usuario."
+          }
+        },
+        {
+          "name": "Crear ubicacion - Casa",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Ubicacion creada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "pm.expect(json).to.have.property('id');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_id\": {{user_id}},\n  \"location_name\": \"Mi Casa\",\n  \"address\": \"Jr. Las Flores 456\",\n  \"city\": \"Lima\",\n  \"latitude\": -12.050000,\n  \"longitude\": -77.040000,\n  \"is_meeting_point\": false\n}"
+            },
+            "url": {"raw": "{{base_url}}/locations", "host": ["{{base_url}}"], "path": ["locations"]},
+            "description": "Crea una segunda ubicacion de recogida."
+          }
+        },
+        {
+          "name": "Listar todas las ubicaciones (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de ubicaciones', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/locations?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["locations"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todas las ubicaciones."
           }
         },
         {
           "name": "Ubicaciones por usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Ubicaciones del usuario', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Data es un arreglo', function() {",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Todas pertenecen al usuario', function() {",
+                  "    json.data.forEach(function(loc) {",
+                  "        pm.expect(loc.user_id).to.eql(parseInt(pm.collectionVariables.get('user_id')));",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/locations/user/1", "host": ["{{base_url}}"], "path": ["locations", "user", "1"]}
-          }
-        },
-        {
-          "name": "Eliminar ubicacion (requiere token)",
-          "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/locations/1", "host": ["{{base_url}}"], "path": ["locations", "1"]}
+            "url": {"raw": "{{base_url}}/locations/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["locations", "user", "{{user_id}}"]},
+            "description": "Obtiene ubicaciones filtradas por usuario."
           }
         }
       ]
     },
     {
-      "name": "Roles",
+      "name": "06 - Roles de Usuario",
+      "description": "Asignacion y gestion de roles. Al crear un producto se asigna 'rentador' automaticamente.",
       "item": [
         {
-          "name": "Listar roles asignados (paginado)",
+          "name": "Listar asignaciones de roles (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de roles', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {"raw": "{{base_url}}/user-roles?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["user-roles"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todas las asignaciones de roles."
           }
         },
         {
-          "name": "Asignar rol (requiere token)",
+          "name": "Roles del usuario actual",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Roles del usuario', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Data es un arreglo', function() {",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Usuario tiene rol asignado', function() {",
+                  "    pm.expect(json.data.length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/user-roles/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["user-roles", "user", "{{user_id}}"]},
+            "description": "Obtiene los roles asignados a un usuario especifico."
+          }
+        },
+        {
+          "name": "Asignar rol manualmente",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Rol asignado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID de asignacion', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('user_role_id', json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": 1,\n  \"role_id\": 1\n}"
+              "raw": "{\n  \"user_id\": {{user_id_2}},\n  \"role_id\": 1\n}"
             },
-            "url": {"raw": "{{base_url}}/user-roles", "host": ["{{base_url}}"], "path": ["user-roles"]}
-          }
-        },
-        {
-          "name": "Roles por usuario",
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/user-roles/user/1", "host": ["{{base_url}}"], "path": ["user-roles", "user", "1"]}
-          }
-        },
-        {
-          "name": "Eliminar rol (requiere token)",
-          "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/user-roles/1", "host": ["{{base_url}}"], "path": ["user-roles", "1"]}
+            "url": {"raw": "{{base_url}}/user-roles", "host": ["{{base_url}}"], "path": ["user-roles"]},
+            "description": "Asigna rol 'cliente' (role_id=1) al segundo usuario."
           }
         }
       ]
     },
     {
-      "name": "Favoritos",
+      "name": "07 - Favoritos",
+      "description": "Gestion de productos favoritos por usuario.",
       "item": [
         {
-          "name": "Listar favoritos (paginado)",
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/favorites?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["favorites"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
-          }
-        },
-        {
-          "name": "Agregar favorito (requiere token)",
+          "name": "Agregar producto a favoritos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Favorito agregado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('favorite_id', json.id);",
+                  "console.log('Favorito ID: ' + json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": 1,\n  \"mongo_product_id\": \"ID_PRODUCTO_MONGO\"\n}"
+              "raw": "{\n  \"user_id\": {{user_id}},\n  \"mongo_product_id\": \"{{product_id}}\"\n}"
             },
-            "url": {"raw": "{{base_url}}/favorites", "host": ["{{base_url}}"], "path": ["favorites"]}
+            "url": {"raw": "{{base_url}}/favorites", "host": ["{{base_url}}"], "path": ["favorites"]},
+            "description": "Agrega un producto a la lista de favoritos del usuario."
+          }
+        },
+        {
+          "name": "Listar todos los favoritos (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de favoritos', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/favorites?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["favorites"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todos los favoritos."
           }
         },
         {
           "name": "Favoritos por usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Favoritos del usuario', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Data es un arreglo', function() {",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Todos pertenecen al usuario', function() {",
+                  "    json.data.forEach(function(fav) {",
+                  "        pm.expect(fav.user_id).to.eql(parseInt(pm.collectionVariables.get('user_id')));",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/favorites/user/1", "host": ["{{base_url}}"], "path": ["favorites", "user", "1"]}
-          }
-        },
-        {
-          "name": "Eliminar favorito (requiere token)",
-          "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/favorites/1", "host": ["{{base_url}}"], "path": ["favorites", "1"]}
+            "url": {"raw": "{{base_url}}/favorites/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["favorites", "user", "{{user_id}}"]},
+            "description": "Obtiene favoritos filtrados por usuario."
           }
         }
       ]
     },
     {
-      "name": "Reservas",
+      "name": "08 - Reservas",
+      "description": "Gestion de reservas de productos. Flujo completo: crear, consultar, actualizar estado.",
       "item": [
         {
-          "name": "Listar reservas (paginado)",
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/reservations?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["reservations"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
-          }
-        },
-        {
-          "name": "Crear reserva (requiere token)",
+          "name": "Crear reserva",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Reserva creada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID de reserva', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "    pm.expect(json.message).to.eql('Reserva creada');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('reservation_id', json.id);",
+                  "console.log('Reserva ID: ' + json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"renter_user_id\": 1,\n  \"mongo_product_id\": \"ID_PRODUCTO_MONGO\",\n  \"start_date\": \"2026-06-01\",\n  \"end_date\": \"2026-06-05\",\n  \"total_price\": 500.00,\n  \"pickup_location_id\": 1\n}"
+              "raw": "{\n  \"renter_user_id\": {{user_id_2}},\n  \"mongo_product_id\": \"{{product_id}}\",\n  \"start_date\": \"2026-06-01\",\n  \"end_date\": \"2026-06-05\",\n  \"total_price\": 500.00,\n  \"pickup_location_id\": {{location_id}}\n}"
             },
-            "url": {"raw": "{{base_url}}/reservations", "host": ["{{base_url}}"], "path": ["reservations"]}
+            "url": {"raw": "{{base_url}}/reservations", "host": ["{{base_url}}"], "path": ["reservations"]},
+            "description": "Crea una reserva. El segundo usuario alquila el producto del primer usuario."
+          }
+        },
+        {
+          "name": "Listar todas las reservas (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de reservas', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "    pm.expect(json).to.have.property('total');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/reservations?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["reservations"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todas las reservas."
           }
         },
         {
           "name": "Obtener reserva por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Reserva encontrada', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Campos requeridos presentes', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('renter_user_id');",
+                  "    pm.expect(json).to.have.property('mongo_product_id');",
+                  "    pm.expect(json).to.have.property('start_date');",
+                  "    pm.expect(json).to.have.property('end_date');",
+                  "    pm.expect(json).to.have.property('total_price');",
+                  "    pm.expect(json).to.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Estado inicial es pending', function() {",
+                  "    pm.expect(json.status).to.eql('pending');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"]}
+            "url": {"raw": "{{base_url}}/reservations/{{reservation_id}}", "host": ["{{base_url}}"], "path": ["reservations", "{{reservation_id}}"]},
+            "description": "Obtiene una reserva especifica por su ID."
           }
         },
         {
-          "name": "Actualizar reserva (requiere token)",
+          "name": "Actualizar estado de reserva",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Reserva actualizada', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Contiene mensaje de confirmacion', function() {",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "PUT",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"status\": \"confirmed\",\n  \"total_price\": 450.00\n}"
+              "raw": "{\n  \"status\": \"confirmed\"\n}"
             },
-            "url": {"raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"]}
+            "url": {"raw": "{{base_url}}/reservations/{{reservation_id}}", "host": ["{{base_url}}"], "path": ["reservations", "{{reservation_id}}"]},
+            "description": "Actualiza el estado de la reserva (pending -> confirmed)."
           }
         },
         {
           "name": "Reservas por usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Reservas del usuario', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Data es un arreglo', function() {",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/reservations/user/1", "host": ["{{base_url}}"], "path": ["reservations", "user", "1"]}
-          }
-        },
-        {
-          "name": "Eliminar reserva (requiere token)",
-          "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"]}
+            "url": {"raw": "{{base_url}}/reservations/user/{{user_id_2}}", "host": ["{{base_url}}"], "path": ["reservations", "user", "{{user_id_2}}"]},
+            "description": "Obtiene reservas filtradas por usuario (inquilino)."
           }
         }
       ]
     },
     {
-      "name": "Pagos",
+      "name": "09 - Pagos",
+      "description": "Gestion de pagos asociados a reservas.",
       "item": [
         {
-          "name": "Listar pagos (paginado)",
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/payments?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["payments"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
-          }
-        },
-        {
-          "name": "Crear pago (requiere token)",
+          "name": "Crear pago para reserva",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Pago creado', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID de pago', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('payment_id', json.id);",
+                  "console.log('Pago ID: ' + json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"reservation_id\": 1,\n  \"amount\": 500.00,\n  \"payment_status\": \"completed\"\n}"
+              "raw": "{\n  \"reservation_id\": {{reservation_id}},\n  \"amount\": 500.00,\n  \"payment_status\": \"completed\",\n  \"transaction_code\": \"TXN-{{$timestamp}}\"\n}"
             },
-            "url": {"raw": "{{base_url}}/payments", "host": ["{{base_url}}"], "path": ["payments"]}
+            "url": {"raw": "{{base_url}}/payments", "host": ["{{base_url}}"], "path": ["payments"]},
+            "description": "Registra un pago completado para la reserva."
+          }
+        },
+        {
+          "name": "Listar todos los pagos (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de pagos', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/payments?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["payments"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todos los pagos."
           }
         },
         {
           "name": "Obtener pago por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Pago encontrado', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Campos requeridos presentes', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('reservation_id');",
+                  "    pm.expect(json).to.have.property('amount');",
+                  "    pm.expect(json).to.have.property('payment_status');",
+                  "});",
+                  "",
+                  "pm.test('Monto coincide', function() {",
+                  "    pm.expect(parseFloat(json.amount)).to.eql(500.00);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/payments/1", "host": ["{{base_url}}"], "path": ["payments", "1"]}
-          }
-        },
-        {
-          "name": "Eliminar pago (requiere token)",
-          "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/payments/1", "host": ["{{base_url}}"], "path": ["payments", "1"]}
+            "url": {"raw": "{{base_url}}/payments/{{payment_id}}", "host": ["{{base_url}}"], "path": ["payments", "{{payment_id}}"]},
+            "description": "Obtiene un pago especifico por su ID."
           }
         }
       ]
     },
     {
-      "name": "Facturas",
+      "name": "10 - Facturas",
+      "description": "Gestion de facturas generadas a partir de pagos.",
       "item": [
         {
-          "name": "Listar facturas (paginado)",
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/invoices?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["invoices"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
-          }
-        },
-        {
-          "name": "Crear factura (requiere token)",
+          "name": "Crear factura para pago",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Factura creada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID de factura', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('invoice_id', json.id);",
+                  "console.log('Factura ID: ' + json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"payment_id\": 1,\n  \"subtotal\": 450.00,\n  \"platform_fee\": 25.00,\n  \"owner_earnings\": 380.00,\n  \"taxes\": 45.00,\n  \"total\": 500.00\n}"
+              "raw": "{\n  \"payment_id\": {{payment_id}},\n  \"subtotal\": 450.00,\n  \"platform_fee\": 25.00,\n  \"owner_earnings\": 380.00,\n  \"taxes\": 45.00,\n  \"total\": 500.00,\n  \"invoice_code\": \"INV-{{$timestamp}}\"\n}"
             },
-            "url": {"raw": "{{base_url}}/invoices", "host": ["{{base_url}}"], "path": ["invoices"]}
+            "url": {"raw": "{{base_url}}/invoices", "host": ["{{base_url}}"], "path": ["invoices"]},
+            "description": "Genera una factura para el pago registrado."
+          }
+        },
+        {
+          "name": "Listar todas las facturas (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de facturas', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/invoices?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["invoices"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todas las facturas."
           }
         },
         {
           "name": "Obtener factura por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Factura encontrada', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Campos requeridos presentes', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('payment_id');",
+                  "    pm.expect(json).to.have.property('subtotal');",
+                  "    pm.expect(json).to.have.property('platform_fee');",
+                  "    pm.expect(json).to.have.property('owner_earnings');",
+                  "    pm.expect(json).to.have.property('taxes');",
+                  "    pm.expect(json).to.have.property('total');",
+                  "    pm.expect(json).to.have.property('invoice_code');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/invoices/1", "host": ["{{base_url}}"], "path": ["invoices", "1"]}
-          }
-        },
-        {
-          "name": "Eliminar factura (requiere token)",
-          "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/invoices/1", "host": ["{{base_url}}"], "path": ["invoices", "1"]}
+            "url": {"raw": "{{base_url}}/invoices/{{invoice_id}}", "host": ["{{base_url}}"], "path": ["invoices", "{{invoice_id}}"]},
+            "description": "Obtiene una factura especifica por su ID."
           }
         }
       ]
     },
     {
-      "name": "Resenas",
+      "name": "11 - Resenas",
+      "description": "Gestion de resenas y calificaciones entre usuarios.",
       "item": [
         {
-          "name": "Listar resenas (paginado)",
+          "name": "Crear resena",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Resena creada', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID de resena', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('review_id', json.id);",
+                  "console.log('Resena ID: ' + json.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reservation_id\": {{reservation_id}},\n  \"reviewer_id\": {{user_id_2}},\n  \"reviewed_user_id\": {{user_id}},\n  \"rating\": 5,\n  \"comment\": \"Excelente servicio, muy recomendado\"\n}"
+            },
+            "url": {"raw": "{{base_url}}/reviews", "host": ["{{base_url}}"], "path": ["reviews"]},
+            "description": "Crea una resena del segundo usuario hacia el primero."
+          }
+        },
+        {
+          "name": "Listar todas las resenas (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de resenas', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
             "url": {"raw": "{{base_url}}/reviews?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["reviews"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todas las resenas."
           }
         },
         {
-          "name": "Crear resena (requiere token)",
-          "request": {
-            "method": "POST",
-            "header": [{"key": "Content-Type", "value": "application/json"}],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"reservation_id\": 1,\n  \"reviewer_id\": 1,\n  \"reviewed_user_id\": 2,\n  \"rating\": 5,\n  \"comment\": \"Excelente servicio\"\n}"
-            },
-            "url": {"raw": "{{base_url}}/reviews", "host": ["{{base_url}}"], "path": ["reviews"]}
-          }
-        },
-        {
-          "name": "Resenas por usuario",
+          "name": "Resenas por usuario calificado",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Resenas del usuario', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Data es un arreglo', function() {",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Todas las resenas son para el usuario', function() {",
+                  "    json.data.forEach(function(rev) {",
+                  "        pm.expect(rev.reviewed_user_id).to.eql(parseInt(pm.collectionVariables.get('user_id')));",
+                  "    });",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/reviews/user/1", "host": ["{{base_url}}"], "path": ["reviews", "user", "1"]}
-          }
-        },
-        {
-          "name": "Eliminar resena (requiere token)",
-          "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/reviews/1", "host": ["{{base_url}}"], "path": ["reviews", "1"]}
+            "url": {"raw": "{{base_url}}/reviews/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["reviews", "user", "{{user_id}}"]},
+            "description": "Obtiene resenas filtradas por usuario calificado."
           }
         }
       ]
     },
     {
-      "name": "Puntos",
+      "name": "12 - Puntos",
+      "description": "Gestion de puntos de fidelidad para usuarios.",
       "item": [
         {
-          "name": "Listar puntos (paginado)",
-          "request": {
-            "method": "GET",
-            "url": {"raw": "{{base_url}}/points?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["points"], "query": [
-              {"key": "page", "value": "1"}, {"key": "per_page", "value": "10"}
-            ]}
-          }
-        },
-        {
-          "name": "Agregar puntos (requiere token)",
+          "name": "Agregar puntos a usuario",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 201 - Puntos agregados', function() {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Respuesta contiene ID', function() {",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('message');",
+                  "});",
+                  "",
+                  "pm.collectionVariables.set('point_id', json.id);",
+                  "console.log('Punto ID: ' + json.id);"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [{"key": "Content-Type", "value": "application/json"}],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"user_id\": 1,\n  \"points_earned\": 50,\n  \"reason\": \"Reserva completada\"\n}"
+              "raw": "{\n  \"user_id\": {{user_id}},\n  \"points_earned\": 100,\n  \"reason\": \"Reserva completada exitosamente\"\n}"
             },
-            "url": {"raw": "{{base_url}}/points", "host": ["{{base_url}}"], "path": ["points"]}
+            "url": {"raw": "{{base_url}}/points", "host": ["{{base_url}}"], "path": ["points"]},
+            "description": "Agrega puntos de fidelidad al usuario por completar una reserva."
           }
         },
         {
-          "name": "Puntos por usuario (con total)",
+          "name": "Listar todas las transacciones de puntos (paginado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Lista de puntos', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Estructura paginada correcta', function() {",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
             "method": "GET",
-            "url": {"raw": "{{base_url}}/points/user/1", "host": ["{{base_url}}"], "path": ["points", "user", "1"]}
+            "url": {"raw": "{{base_url}}/points?page=1&per_page=10", "host": ["{{base_url}}"], "path": ["points"], "query": [
+              {"key": "page", "value": "1"},
+              {"key": "per_page", "value": "10"}
+            ]},
+            "description": "Lista paginada de todas las transacciones de puntos."
           }
         },
         {
-          "name": "Eliminar puntos (requiere token)",
+          "name": "Puntos por usuario (con total acumulado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 - Puntos del usuario', function() {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "pm.test('Incluye total_points acumulado', function() {",
+                  "    pm.expect(json).to.have.property('total_points');",
+                  "    pm.expect(json).to.have.property('data');",
+                  "    pm.expect(json.data).to.be.an('array');",
+                  "});",
+                  "",
+                  "pm.test('Total de puntos es positivo', function() {",
+                  "    pm.expect(json.total_points).to.be.at.least(100);",
+                  "});"
+                ]
+              }
+            }
+          ],
           "request": {
-            "method": "DELETE",
-            "url": {"raw": "{{base_url}}/points/1", "host": ["{{base_url}}"], "path": ["points", "1"]}
+            "method": "GET",
+            "url": {"raw": "{{base_url}}/points/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["points", "user", "{{user_id}}"]},
+            "description": "Obtiene puntos de un usuario con el total acumulado."
           }
         }
       ]

@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.user import User
 from app.models.role import Role
 from app.models.user_role import UserRole
+from app.models.review import Review
 from app.models import db
 from app.utils import validate_required, paginate, error_response
 
@@ -93,7 +94,35 @@ def update_user(id):
 @user_bp.route('/users/<int:id>', methods=['DELETE'])
 @jwt_required()
 def delete_user(id):
+    current_user_id = int(get_jwt_identity())
+
+    if current_user_id == id:
+        return error_response("No puedes eliminarte a ti mismo", 400)
+
+    admin_role = Role.query.filter_by(role_name='admin').first()
+    if not admin_role:
+        return error_response("Rol de administrador no encontrado", 500)
+
+    is_admin = UserRole.query.filter_by(
+        user_id=current_user_id,
+        role_id=admin_role.id
+    ).first() is not None
+
+    if not is_admin:
+        return error_response("No tienes permisos para eliminar usuarios", 403)
+
     user = User.query.get_or_404(id)
-    db.session.delete(user)
-    db.session.commit()
-    return jsonify({"message": "Usuario eliminado"}), 200
+
+    try:
+        UserRole.query.filter_by(user_id=id).delete()
+        Review.query.filter(
+            (Review.reviewer_id == id) | (Review.reviewed_user_id == id)
+        ).delete()
+
+        db.session.delete(user)
+        db.session.commit()
+        return jsonify({"message": "Usuario eliminado"}), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return error_response(str(e), 400)
