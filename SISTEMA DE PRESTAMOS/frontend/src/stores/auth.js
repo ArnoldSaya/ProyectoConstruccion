@@ -49,7 +49,8 @@ export const useAuthStore = defineStore('auth', {
       if (!this.refreshToken) return false
       try {
         const { data } = await api.post('/auth/refresh', {}, {
-          headers: { Authorization: `Bearer ${this.refreshToken}` }
+          headers: { Authorization: `Bearer ${this.refreshToken}` },
+          _skipAuthRefresh: true
         })
         this.token = data.token
         localStorage.setItem('token', data.token)
