@@ -93,6 +93,20 @@ const endMonth = ref('')
 const endYear = ref('')
 const totalPrice = ref('')
 
+// Valores por defecto: hoy + 1 día
+const today = new Date()
+const tomorrow = new Date(today)
+tomorrow.setDate(tomorrow.getDate() + 1)
+
+function pad2(n) { return String(n).padStart(2, '0') }
+
+startDay.value = pad2(today.getDate())
+startMonth.value = pad2(today.getMonth() + 1)
+startYear.value = String(today.getFullYear())
+endDay.value = pad2(tomorrow.getDate())
+endMonth.value = pad2(tomorrow.getMonth() + 1)
+endYear.value = String(tomorrow.getFullYear())
+
 const currentYear = new Date().getFullYear()
 const years = computed(() => Array.from({ length: 10 }, (_, i) => currentYear + i))
 const months = [
