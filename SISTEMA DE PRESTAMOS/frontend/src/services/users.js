@@ -9,3 +9,6 @@ export function updateUser(id, payload) {
 export function becomeRentador() {
   return api.post('/user-roles/self', { role_name: 'rentador' })
 }
+export function removeRoleSelf(roleName) {
+  return api.delete('/user-roles/self', { data: { role_name: roleName } })
+}

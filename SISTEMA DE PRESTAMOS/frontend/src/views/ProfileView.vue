@@ -14,6 +14,13 @@
         </button>
       </p>
 
+      <p v-else-if="auth.isRentador" class="alert alert-info">
+        Eres rentador: puedes publicar productos y ver "Mis productos".
+        <button type="button" class="btn-secondary" :disabled="demoting" @click="stopBeingRentador">
+          {{ demoting ? 'Quitando...' : 'Dejar de ser rentador' }}
+        </button>
+      </p>
+
       <label>Nombre completo
         <input v-model="form.full_name" required />
       </label>
@@ -33,7 +40,7 @@
 <script setup>
 import { onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { updateUser, becomeRentador } from '../services/users'
+import { updateUser, becomeRentador, removeRoleSelf } from '../services/users'
 import { useAuthStore } from '../stores/auth'
 
 const auth = useAuthStore()
@@ -43,6 +50,7 @@ const error = ref('')
 const success = ref(false)
 const loading = ref(false)
 const promoting = ref(false)
+const demoting = ref(false)
 const initialLoading = ref(true)
 
 const form = reactive({ full_name: '', email: '', phone: '' })
@@ -77,6 +85,18 @@ async function activateRentador() {
     error.value = e.response?.data?.error?.[0] || 'No se pudo activar el rol de rentador'
   } finally {
     promoting.value = false
+  }
+}
+
+async function stopBeingRentador() {
+  demoting.value = true
+  try {
+    await removeRoleSelf('rentador')
+    await auth.fetchMe()
+  } catch (e) {
+    error.value = e.response?.data?.error?.[0] || 'No se pudo quitar el rol de rentador'
+  } finally {
+    demoting.value = false
   }
 }
 

@@ -74,6 +74,39 @@ def assign_role_self():
     return jsonify({"message": f"Rol '{role.role_name}' asignado", "id": user_role.id}), 201
 
 
+@user_role_bp.route('/user-roles/self', methods=['DELETE'])
+@jwt_required()
+def remove_role_self():
+    """
+    Permite al usuario autenticado quitarse un rol por nombre (ej. 'rentador').
+    No se puede quitar el rol 'cliente' (siempre debe quedar como minimo cliente).
+    """
+    current_user_id = int(get_jwt_identity())
+    data = request.get_json()
+    if not data:
+        return error_response("Datos JSON requeridos")
+
+    err = validate_required(data, ['role_name'])
+    if err:
+        return jsonify(err), 400
+
+    if data['role_name'] == 'cliente':
+        return error_response("No puedes quitarte el rol de cliente", 400)
+
+    role = Role.query.filter_by(role_name=data['role_name']).first()
+    if not role:
+        return error_response("Rol no encontrado", 404)
+
+    ur = UserRole.query.filter_by(user_id=current_user_id, role_id=role.id).first()
+    if not ur:
+        return error_response("El usuario no tiene este rol", 400)
+
+    db.session.delete(ur)
+    db.session.commit()
+
+    return jsonify({"message": f"Rol '{role.role_name}' removido"}), 200
+
+
 @user_role_bp.route('/user-roles', methods=['GET'])
 def get_roles():
     result = paginate(UserRole.query.order_by(UserRole.assigned_at.desc()))
