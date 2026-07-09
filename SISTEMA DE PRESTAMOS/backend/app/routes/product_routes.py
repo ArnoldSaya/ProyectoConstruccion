@@ -2,7 +2,7 @@ import os
 import uuid
 from bson.objectid import ObjectId
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.mongo_models import CategoryModel, ProductModel
 from app.models.role import Role
 from app.models.user_role import UserRole
@@ -226,6 +226,50 @@ def delete_product(product_id):
             return error_response("Producto no encontrado", 404)
 
         return jsonify({"message": "Producto eliminado"}), 200
+    except Exception as e:
+        return error_response(str(e), 400)
+
+
+@product_bp.route('/products/<string:product_id>', methods=['PUT'])
+@jwt_required()
+def update_product(product_id):
+    """Edita los campos de un producto. Verifica que sea del usuario autenticado."""
+    data = request.get_json()
+    if not data:
+        return error_response("Datos JSON requeridos")
+
+    try:
+        product = mongo_db.products.find_one({"_id": ObjectId(product_id)})
+        if not product:
+            return error_response("Producto no encontrado", 404)
+
+        owner = int(get_jwt_identity())
+        if product.get('owner_id') != owner:
+            return error_response("No tienes permiso para editar este producto", 403)
+
+        updates = {}
+        if 'name_prod' in data:
+            updates['name_prod'] = data['name_prod']
+        if 'description' in data:
+            updates['description'] = data['description']
+        if 'price' in data:
+            updates['price'] = float(data['price'])
+        if 'details' in data:
+            updates['details'] = data['details']
+        if 'status' in data:
+            updates['status'] = data['status']
+        if 'image_url' in data:
+            updates['image_url'] = data['image_url']
+        if 'category_id' in data and data['category_id']:
+            updates['category_id'] = ObjectId(data['category_id'])
+
+        if not updates:
+            return error_response("Nada para actualizar", 400)
+
+        mongo_db.products.update_one(
+            {"_id": ObjectId(product_id)}, {"$set": updates}
+        )
+        return jsonify({"message": "Producto actualizado"}), 200
     except Exception as e:
         return error_response(str(e), 400)
 

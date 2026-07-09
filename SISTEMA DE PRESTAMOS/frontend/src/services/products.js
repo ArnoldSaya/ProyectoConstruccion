@@ -43,6 +43,10 @@ export function deleteProduct(id) {
   return api.delete(`/products/${id}`)
 }
 
+export function updateProduct(id, payload) {
+  return api.put(`/products/${id}`, payload)
+}
+
 export function createProduct(payload) {
   return api.post('/products', payload)
 }
