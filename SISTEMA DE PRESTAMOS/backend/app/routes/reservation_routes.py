@@ -19,7 +19,7 @@ def create_reservation():
     if not data:
         return error_response("Datos JSON requeridos")
 
-    err = validate_required(data, ['renter_user_id', 'mongo_product_id', 'start_date', 'end_date', 'total_price'])
+    err = validate_required(data, ['renter_user_id', 'mongo_product_id', 'start_date', 'end_date'])
     if err:
         return jsonify(err), 400
 
@@ -42,19 +42,35 @@ def create_reservation():
         if start >= end:
             return error_response("La fecha de inicio debe ser anterior a la fecha de fin")
 
+        # ==================================
+        # PRECIO CALCULADO POR EL SISTEMA (autoritativo)
+        # total = precio_del_producto * dias_de_alquiler
+        # ==================================
+        days = (end - start).days
+        if days < 1:
+            days = 1
+        product_price = float(product.get('price') or 0)
+        total_price = round(product_price * days, 2)
+
         reservation = Reservation(
             renter_user_id=data['renter_user_id'],
             mongo_product_id=data['mongo_product_id'],
             pickup_location_id=data.get('pickup_location_id'),
             start_date=start,
             end_date=end,
-            total_price=data['total_price'],
+            total_price=total_price,
             status=data.get('status', 'pending')
         )
         db.session.add(reservation)
         db.session.commit()
 
-        return jsonify({"message": "Reserva creada", "id": reservation.id}), 201
+        return jsonify({
+            "message": "Reserva creada",
+            "id": reservation.id,
+            "days": days,
+            "unit_price": product_price,
+            "total_price": float(reservation.total_price)
+        }), 201
 
     except Exception as e:
         return error_response(str(e), 400)
@@ -111,10 +127,19 @@ def update_reservation(id):
             reservation.start_date = datetime.strptime(data['start_date'], '%Y-%m-%d').date()
         if 'end_date' in data:
             reservation.end_date = datetime.strptime(data['end_date'], '%Y-%m-%d').date()
-        if 'total_price' in data:
-            reservation.total_price = data['total_price']
         if 'pickup_location_id' in data:
             reservation.pickup_location_id = data['pickup_location_id']
+
+        # Recalcular precio si cambiaron las fechas (el sistema lo pone)
+        if 'start_date' in data or 'end_date' in data:
+            product = mongo_db.products.find_one({"_id": ObjectId(reservation.mongo_product_id)})
+            if not product:
+                return error_response("Producto asociado no encontrado", 404)
+            days = (reservation.end_date - reservation.start_date).days
+            if days < 1:
+                days = 1
+            unit = float(product.get('price') or 0)
+            reservation.total_price = round(unit * days, 2)
 
         db.session.commit()
         return jsonify({"message": "Reserva actualizada"}), 200
