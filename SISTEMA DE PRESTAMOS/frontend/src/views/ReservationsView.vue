@@ -35,9 +35,7 @@ function formatDate(value) {
   if (!value) return ''
   const parts = value.split('-')
   if (parts.length !== 3) return value
-  const d = new Date(+parts[0], +parts[1] - 1, +parts[2])
-  if (Number.isNaN(d.getTime())) return value
-  return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+  return `${parts[2]}/${parts[1]}/${parts[0]}`
 }
 
 function formatPrice(value) {
