@@ -21,11 +21,11 @@
             <div class="date-selects">
               <select v-model="startDay" required>
                 <option value="">Día</option>
-                <option v-for="d in days" :key="d" :value="String(d).padStart(2, '0')">{{ d }}</option>
+                <option v-for="d in startDays" :key="d" :value="d">{{ d }}</option>
               </select>
               <select v-model="startMonth" required>
                 <option value="">Mes</option>
-                <option v-for="(m, i) in months" :key="i" :value="String(i + 1).padStart(2, '0')">{{ m }}</option>
+                <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
               </select>
               <select v-model="startYear" required>
                 <option value="">Año</option>
@@ -37,11 +37,11 @@
             <div class="date-selects">
               <select v-model="endDay" required>
                 <option value="">Día</option>
-                <option v-for="d in days" :key="d" :value="String(d).padStart(2, '0')">{{ d }}</option>
+                <option v-for="d in endDays" :key="d" :value="d">{{ d }}</option>
               </select>
               <select v-model="endMonth" required>
                 <option value="">Mes</option>
-                <option v-for="(m, i) in months" :key="i" :value="String(i + 1).padStart(2, '0')">{{ m }}</option>
+                <option v-for="m in months" :key="m.value" :value="m.value">{{ m.label }}</option>
               </select>
               <select v-model="endYear" required>
                 <option value="">Año</option>
@@ -50,7 +50,7 @@
             </div>
           </label>
           <label>Precio total (S/)
-            <input v-model="reservation.total_price" type="number" step="0.01" required />
+            <input v-model="totalPrice" type="number" step="0.01" required />
           </label>
           <p v-if="error" class="alert alert-error">{{ error }}</p>
           <p v-if="success" class="alert alert-success">¡Reserva creada!</p>
