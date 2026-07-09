@@ -33,7 +33,9 @@ const error = ref('')
 
 function formatDate(value) {
   if (!value) return ''
-  const d = new Date(value)
+  const parts = value.split('-')
+  if (parts.length !== 3) return value
+  const d = new Date(+parts[0], +parts[1] - 1, +parts[2])
   if (Number.isNaN(d.getTime())) return value
   return d.toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
 }
