@@ -8,6 +8,7 @@ const routes = [
   { path: '/oauth-callback', name: 'oauth-callback', component: () => import('../views/OAuthCallbackView.vue') },
   { path: '/productos/:id', name: 'product-detail', component: () => import('../views/ProductDetailView.vue'), props: true },
   { path: '/publicar', name: 'publish-product', component: () => import('../views/PublishProductView.vue'), meta: { requiresAuth: true, role: 'rentador' } },
+  { path: '/mis-productos', name: 'my-products', component: () => import('../views/MyProductsView.vue'), meta: { requiresAuth: true, role: 'rentador' } },
   { path: '/mis-reservas', name: 'reservations', component: () => import('../views/ReservationsView.vue'), meta: { requiresAuth: true } },
   { path: '/favoritos', name: 'favorites', component: () => import('../views/FavoritesView.vue'), meta: { requiresAuth: true } },
   { path: '/perfil', name: 'profile', component: () => import('../views/ProfileView.vue'), meta: { requiresAuth: true } },

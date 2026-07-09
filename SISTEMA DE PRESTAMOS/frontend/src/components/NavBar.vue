@@ -12,6 +12,7 @@
         <router-link to="/" @click="close">Inicio</router-link>
         <template v-if="auth.isAuthenticated">
           <router-link v-if="auth.isRentador" to="/publicar" @click="close">Publicar</router-link>
+          <router-link v-if="auth.isRentador" to="/mis-productos" @click="close">Mis productos</router-link>
           <router-link to="/mis-reservas" @click="close">Mis reservas</router-link>
           <router-link to="/favoritos" @click="close">Favoritos</router-link>
           <router-link to="/perfil" @click="close" class="nav-user">

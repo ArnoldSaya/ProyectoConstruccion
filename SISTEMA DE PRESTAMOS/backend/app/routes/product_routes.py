@@ -161,6 +161,26 @@ def get_products():
     }), 200
 
 
+@product_bp.route('/products/owner/<int:owner_id>', methods=['GET'])
+def get_products_by_owner(owner_id):
+    """Lista los productos publicados por un usuario (panel del rentador)."""
+    products = list(mongo_db.products.find({"owner_id": owner_id}))
+    result = []
+    for product in products:
+        result.append({
+            "_id": str(product['_id']),
+            "owner_id": product.get('owner_id'),
+            "name_prod": product.get('name_prod'),
+            "description": product.get('description'),
+            "category_id": str(product.get('category_id')) if product.get('category_id') else None,
+            "price": product.get('price'),
+            "details": product.get('details'),
+            "status": product.get('status', 'disponible'),
+            "image_url": product.get('image_url')
+        })
+    return jsonify({"data": result, "total": len(result)}), 200
+
+
 @product_bp.route('/products/<string:product_id>', methods=['GET'])
 def get_product(product_id):
     try:

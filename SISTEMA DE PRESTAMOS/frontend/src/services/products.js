@@ -35,6 +35,14 @@ export function getProduct(id) {
   return api.get(`/products/${id}`)
 }
 
+export function getProductsByOwner(ownerId, params = {}) {
+  return api.get(`/products/owner/${ownerId}`, { params })
+}
+
+export function deleteProduct(id) {
+  return api.delete(`/products/${id}`)
+}
+
 export function createProduct(payload) {
   return api.post('/products', payload)
 }
