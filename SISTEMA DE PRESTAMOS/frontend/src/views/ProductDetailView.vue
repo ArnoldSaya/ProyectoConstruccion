@@ -15,8 +15,10 @@
       </div>
 
       <div class="card product-detail-side" v-if="auth.isAuthenticated">
-        <h2>Reservar</h2>
-        <form @submit.prevent="handleReserve">
+        <h2 v-if="!reservationCreated">Reservar</h2>
+        <h2 v-else>Reserva confirmada — Factura</h2>
+
+        <form v-if="!reservationCreated" @submit.prevent="handleReserve">
           <label>Fecha de inicio
             <div class="date-selects">
               <select v-model="startDay" required>
@@ -49,14 +51,35 @@
               </select>
             </div>
           </label>
-          <label>Precio total (S/)
-            <input v-model="totalPrice" type="number" step="0.01" required />
-          </label>
+
+          <div class="price-summary">
+            <div class="price-row"><span>Precio/día</span><span>S/ {{ formatPrice(product.price) }}</span></div>
+            <div class="price-row"><span>Días</span><span>{{ daysDiff }}</span></div>
+            <div class="price-row total"><span>Total</span><span>S/ {{ formatPrice(computedTotal) }}</span></div>
+          </div>
+
           <p v-if="error" class="alert alert-error">{{ error }}</p>
-          <p v-if="success" class="alert alert-success">¡Reserva creada!</p>
-          <button type="submit" :disabled="loadingReserve || !validStartDate || !validEndDate">{{ loadingReserve ? 'Reservando...' : 'Reservar' }}</button>
+          <button type="submit" :disabled="loadingReserve || !validStartDate || !validEndDate || daysDiff < 1">
+            {{ loadingReserve ? 'Reservando...' : 'Reservar' }}
+          </button>
         </form>
+
+        <div v-else class="invoice">
+          <div class="invoice-header">
+            <span class="invoice-code">INV-{{ reservationId }}</span>
+            <span class="invoice-date">{{ formatDate(new Date().toISOString()) }}</span>
+          </div>
+          <div class="invoice-row"><strong>Producto:</strong> {{ product.name_prod }}</div>
+          <div class="invoice-row"><strong>Fecha inicio:</strong> {{ formatDate(startDateObj) }}</div>
+          <div class="invoice-row"><strong>Fecha fin:</strong> {{ formatDate(endDateObj) }}</div>
+          <div class="invoice-row"><strong>Días:</strong> {{ daysDiff }}</div>
+          <div class="invoice-row"><strong>Precio/día:</strong> S/ {{ formatPrice(product.price) }}</div>
+          <div class="invoice-row total"><strong>Total pagado:</strong> S/ {{ formatPrice(computedTotal) }}</div>
+          <div class="invoice-row"><strong>Estado:</strong> <span class="badge confirmed">Confirmada</span></div>
+          <button @click="newReservation" class="btn-secondary">Nueva reserva</button>
+        </div>
       </div>
+
       <p v-else class="card product-detail-side">
         <router-link to="/login">Inicia sesión</router-link> para reservar este producto.
       </p>
@@ -137,6 +160,40 @@ function buildDate(day, month, year) {
 const validStartDate = computed(() => !!buildDate(startDay.value, startMonth.value, startYear.value))
 const validEndDate = computed(() => !!buildDate(endDay.value, endMonth.value, endYear.value))
 
+const startDateObj = computed(() => buildDate(startDay.value, startMonth.value, startYear.value))
+const endDateObj = computed(() => buildDate(endDay.value, endMonth.value, endYear.value))
+
+const daysDiff = computed(() => {
+  if (!startDateObj.value || !endDateObj.value) return 0
+  const start = new Date(startDateObj.value)
+  const end = new Date(endDateObj.value)
+  const diff = Math.ceil((end - start) / (1000 * 60 * 60 * 24))
+  return diff > 0 ? diff : 0
+})
+
+const computedTotal = computed(() => {
+  if (!product.value || daysDiff.value < 1) return 0
+  return product.value.price * daysDiff.value
+})
+
+const reservationCreated = ref(false)
+const reservationId = ref('')
+
+function formatDate(value) {
+  if (!value) return ''
+  const d = new Date(value)
+  const day = String(d.getDate()).padStart(2, '0')
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const year = d.getFullYear()
+  return `${day}/${month}/${year}`
+}
+
+function newReservation() {
+  reservationCreated.value = false
+  reservationId.value = ''
+  error.value = ''
+}
+
 watch([startDay, startMonth, startYear], () => {
   if (startDays.value.length && !startDays.value.includes(startDay.value)) startDay.value = ''
 })
@@ -163,19 +220,19 @@ async function loadProduct() {
 
 async function handleReserve() {
   error.value = ''
-  success.value = false
   loadingReserve.value = true
   try {
     const start_date = buildDate(startDay.value, startMonth.value, startYear.value)
     const end_date = buildDate(endDay.value, endMonth.value, endYear.value)
-    await createReservation({
+    const response = await createReservation({
       renter_user_id: auth.user.id,
       mongo_product_id: props.id,
       start_date,
       end_date,
-      total_price: totalPrice.value
+      total_price: computedTotal.value
     })
-    success.value = true
+    reservationId.value = response.data.id
+    reservationCreated.value = true
   } catch (e) {
     error.value = e.response?.data?.error?.[0] || 'No se pudo crear la reserva'
   } finally {
@@ -205,4 +262,92 @@ onMounted(loadProduct)
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
 }
+
+.price-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 12px;
+  margin: 12px 0;
+}
+.price-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 14px;
+}
+.price-row.total {
+  border-top: 1px solid #e2e8f0;
+  margin-top: 4px;
+  padding-top: 10px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.price-output {
+  display: block;
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.invoice {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 8px;
+}
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+  margin-bottom: 12px;
+}
+.invoice-code {
+  font-family: monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3b82f6;
+}
+.invoice-date { font-size: 13px; color: #64748b; }
+.invoice-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.invoice-row:last-child { border-bottom: none; }
+.invoice-row.total {
+  border-top: 2px solid #e2e8f0;
+  margin-top: 8px;
+  padding-top: 12px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.badge.confirmed { background: #dcfce7; color: #166534; }
+.badge.pending { background: #fef3c7; color: #92400e; }
+.btn-secondary {
+  margin-top: 12px;
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  width: 100%;
+}
+.btn-secondary:hover { background: #e2e8f0; }
 </style>
