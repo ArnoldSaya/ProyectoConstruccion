@@ -76,6 +76,15 @@ class User(db.Model):
             auth_provider='google'
         )
         db.session.add(user)
+        db.session.flush()  # para obtener user.id
+
+        # Asignar rol 'cliente' por defecto (igual que en register)
+        from app.models.role import Role
+        from app.models.user_role import UserRole
+        cliente_role = Role.query.filter_by(role_name='cliente').first()
+        if cliente_role:
+            db.session.add(UserRole(user_id=user.id, role_id=cliente_role.id))
+
         db.session.commit()
         return user
 
