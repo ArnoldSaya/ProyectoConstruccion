@@ -19,9 +19,11 @@
         <form @submit.prevent="handleReserve">
           <label>Fecha de inicio
             <input v-model="reservation.start_date" type="date" required />
+            <span v-if="reservation.start_date" class="date-hint">{{ formatDateHint(reservation.start_date) }}</span>
           </label>
           <label>Fecha de fin
             <input v-model="reservation.end_date" type="date" required />
+            <span v-if="reservation.end_date" class="date-hint">{{ formatDateHint(reservation.end_date) }}</span>
           </label>
           <label>Precio total (S/)
             <input v-model="reservation.total_price" type="number" step="0.01" required />
@@ -66,6 +68,13 @@ function formatPrice(value) {
   return Number.isNaN(n) ? value : n.toFixed(2)
 }
 
+function formatDateHint(value) {
+  if (!value) return ''
+  const parts = value.split('-')
+  if (parts.length !== 3) return ''
+  return `→ ${parts[2]}/${parts[1]}/${parts[0]}`
+}
+
 async function loadProduct() {
   loading.value = true
   try {
@@ -100,3 +109,12 @@ async function handleReserve() {
 
 onMounted(loadProduct)
 </script>
+
+<style scoped>
+.date-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: #64748b;
+}
+</style>
