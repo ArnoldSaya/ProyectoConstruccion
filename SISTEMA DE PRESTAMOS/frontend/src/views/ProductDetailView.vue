@@ -55,7 +55,10 @@
           <div class="price-summary">
             <div class="price-row"><span>Precio/día</span><span>S/ {{ formatPrice(product.price) }}</span></div>
             <div class="price-row"><span>Días</span><span>{{ daysDiff }}</span></div>
-            <div class="price-row total"><span>Total</span><span>S/ {{ formatPrice(computedTotal) }}</span></div>
+            <div class="price-row"><span>Subtotal</span><span>S/ {{ formatPrice(computedTotal) }}</span></div>
+            <div class="price-row fee"><span>Comisión plataforma ({{ (COMMISSION_RATE * 100).toFixed(0) }}%)</span><span>− S/ {{ formatPrice(platformFee) }}</span></div>
+            <div class="price-row earnings"><span>Gana el rentador</span><span>S/ {{ formatPrice(ownerEarnings) }}</span></div>
+            <div class="price-row total"><span>Total a pagar</span><span>S/ {{ formatPrice(computedTotal) }}</span></div>
           </div>
 
           <p v-if="error" class="alert alert-error">{{ error }}</p>
@@ -74,6 +77,9 @@
           <div class="invoice-row"><strong>Fecha fin:</strong> {{ formatDate(endDateObj) }}</div>
           <div class="invoice-row"><strong>Días:</strong> {{ daysDiff }}</div>
           <div class="invoice-row"><strong>Precio/día:</strong> S/ {{ formatPrice(product.price) }}</div>
+          <div class="invoice-row"><strong>Subtotal:</strong> S/ {{ formatPrice(computedTotal) }}</div>
+          <div class="invoice-row fee"><strong>Comisión plataforma ({{ (COMMISSION_RATE * 100).toFixed(0) }}%):</strong> − S/ {{ formatPrice(platformFee) }}</div>
+          <div class="invoice-row earnings"><strong>Gana el rentador:</strong> S/ {{ formatPrice(ownerEarnings) }}</div>
           <div class="invoice-row total"><strong>Total pagado:</strong> S/ {{ formatPrice(computedTotal) }}</div>
           <div class="invoice-row"><strong>Estado:</strong> <span class="badge confirmed">Confirmada</span></div>
           <button @click="newReservation" class="btn-secondary">Nueva reserva</button>
@@ -175,6 +181,10 @@ const computedTotal = computed(() => {
   if (!product.value || daysDiff.value < 1) return 0
   return product.value.price * daysDiff.value
 })
+
+const COMMISSION_RATE = 0.10 // 10 % para la plataforma
+const platformFee = computed(() => +(computedTotal.value * COMMISSION_RATE).toFixed(2))
+const ownerEarnings = computed(() => +(computedTotal.value - platformFee.value).toFixed(2))
 
 const reservationCreated = ref(false)
 const reservationId = ref('')
@@ -282,6 +292,15 @@ onMounted(loadProduct)
   padding-top: 10px;
   font-weight: 700;
   font-size: 15px;
+}
+.price-row.fee {
+  color: #ef4444;
+  font-size: 13px;
+}
+.price-row.earnings {
+  color: #16a34a;
+  font-weight: 600;
+  font-size: 13px;
 }
 .price-output {
   display: block;
