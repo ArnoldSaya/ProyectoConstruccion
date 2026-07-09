@@ -174,6 +174,42 @@ def get_product(product_id):
         return error_response(str(e), 400)
 
 
+@product_bp.route('/products/<string:product_id>', methods=['DELETE'])
+@jwt_required()
+def delete_product(product_id):
+    """Elimina un producto de MongoDB. Bloquea si tiene reservas activas."""
+    try:
+        product = mongo_db.products.find_one({"_id": ObjectId(product_id)})
+        if not product:
+            return error_response("Producto no encontrado", 404)
+
+        from app.models.reservation import Reservation
+        activas = Reservation.query.filter(
+            Reservation.mongo_product_id == product_id,
+            Reservation.status.in_(['pending', 'confirmed'])
+        ).count()
+        if activas > 0:
+            return error_response(
+                f"No se puede eliminar: tiene {activas} reserva(s) activa(s)", 400
+            )
+
+        # Limpiar referencias en favoritos
+        try:
+            from app.models.favorite import Favorite
+            Favorite.query.filter_by(mongo_product_id=product_id).delete()
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+        result = mongo_db.products.delete_one({"_id": ObjectId(product_id)})
+        if result.deleted_count == 0:
+            return error_response("Producto no encontrado", 404)
+
+        return jsonify({"message": "Producto eliminado"}), 200
+    except Exception as e:
+        return error_response(str(e), 400)
+
+
 @product_bp.route('/uploads', methods=['POST'])
 @jwt_required()
 def upload_image():
