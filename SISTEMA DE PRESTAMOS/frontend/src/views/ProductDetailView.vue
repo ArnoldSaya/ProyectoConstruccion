@@ -11,7 +11,14 @@
         <h1>{{ product.name_prod }}</h1>
         <p class="price price-lg">S/ {{ formatPrice(product.price) }}</p>
         <p>{{ product.description }}</p>
-        <p v-if="product.details"><strong>Detalles:</strong> {{ product.details }}</p>
+        <div v-if="product.details" class="product-details">
+          <h4>Detalles</h4>
+          <ul>
+            <li v-for="(value, key) in parsedDetails" :key="key">
+              <strong>{{ formatKey(key) }}:</strong> {{ value }}
+            </li>
+          </ul>
+        </div>
       </div>
 
       <div class="card product-detail-side" v-if="auth.isAuthenticated">
@@ -185,6 +192,19 @@ const computedTotal = computed(() => {
 const COMMISSION_RATE = 0.10 // 10 % para la plataforma
 const platformFee = computed(() => +(computedTotal.value * COMMISSION_RATE).toFixed(2))
 const ownerEarnings = computed(() => +(computedTotal.value - platformFee.value).toFixed(2))
+
+const parsedDetails = computed(() => {
+  if (!product.value?.details) return {}
+  try {
+    return JSON.parse(product.value.details)
+  } catch {
+    return { info: product.value.details }
+  }
+})
+
+function formatKey(key) {
+  return key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ')
+}
 
 const reservationCreated = ref(false)
 const reservationId = ref('')
@@ -369,4 +389,33 @@ onMounted(loadProduct)
   width: 100%;
 }
 .btn-secondary:hover { background: #e2e8f0; }
+
+.product-details {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+.product-details h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+.product-details ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.product-details li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  font-size: 13px;
+  border-bottom: 1px solid #f1f5f9;
+}
+.product-details li:last-child { border-bottom: none; }
+.product-details li strong { color: #475569; }
+.product-details li span { color: #1e293b; font-weight: 500; }
 </style>
