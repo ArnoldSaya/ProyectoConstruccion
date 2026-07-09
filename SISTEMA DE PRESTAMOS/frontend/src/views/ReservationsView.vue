@@ -35,7 +35,9 @@ function formatDate(value) {
   if (!value) return ''
   const parts = value.split('-')
   if (parts.length !== 3) return value
-  return `${parts[2]}/${parts[1]}/${parts[0]}`
+  const meses = ['ene.', 'feb.', 'mar.', 'abr.', 'may.', 'jun.', 'jul.', 'ago.', 'sep.', 'oct.', 'nov.', 'dic.']
+  const mes = meses[+parts[1] - 1]
+  return `${parts[2]} ${mes} ${parts[0]}`
 }
 
 function formatPrice(value) {
