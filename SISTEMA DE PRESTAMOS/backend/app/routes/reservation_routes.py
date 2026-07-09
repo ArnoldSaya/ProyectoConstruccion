@@ -42,6 +42,16 @@ def create_reservation():
         if start >= end:
             return error_response("La fecha de inicio debe ser anterior a la fecha de fin")
 
+        # Validar solapamiento con reservas existentes del mismo producto
+        overlap = Reservation.query.filter(
+            Reservation.mongo_product_id == data['mongo_product_id'],
+            Reservation.status.in_(['pending', 'confirmed', 'active']),
+            Reservation.start_date <= end,
+            Reservation.end_date >= start
+        ).first()
+        if overlap:
+            return error_response("El producto ya tiene una reserva para esas fechas", 409)
+
         # ==================================
         # PRECIO CALCULADO POR EL SISTEMA (autoritativo)
         # total = precio_del_producto * dias_de_alquiler
@@ -62,6 +72,13 @@ def create_reservation():
             status=data.get('status', 'pending')
         )
         db.session.add(reservation)
+
+        # Actualizar estado del producto a "reservado"
+        mongo_db.products.update_one(
+            {"_id": ObjectId(data['mongo_product_id'])},
+            {"$set": {"status": "reservado"}}
+        )
+
         db.session.commit()
 
         return jsonify({
@@ -120,6 +137,9 @@ def update_reservation(id):
     if not data:
         return error_response("Datos JSON requeridos")
 
+    old_status = reservation.status
+    product_id = reservation.mongo_product_id
+
     try:
         if 'status' in data:
             reservation.status = data['status']
@@ -142,6 +162,27 @@ def update_reservation(id):
             reservation.total_price = round(unit * days, 2)
 
         db.session.commit()
+
+        # Actualizar estado del producto según estado de la reserva
+        if old_status != reservation.status:
+            if reservation.status in ('cancelled', 'rejected'):
+                # Verificar si hay otras reservas activas para este producto
+                active = Reservation.query.filter(
+                    Reservation.mongo_product_id == product_id,
+                    Reservation.id != id,
+                    Reservation.status.in_(['pending', 'confirmed', 'active'])
+                ).first()
+                new_status = 'disponible' if not active else 'reservado'
+                mongo_db.products.update_one(
+                    {"_id": ObjectId(product_id)},
+                    {"$set": {"status": new_status}}
+                )
+            elif reservation.status in ('pending', 'confirmed', 'active'):
+                mongo_db.products.update_one(
+                    {"_id": ObjectId(product_id)},
+                    {"$set": {"status": "reservado"}}
+                )
+
         return jsonify({"message": "Reserva actualizada"}), 200
 
     except Exception as e:
@@ -152,8 +193,21 @@ def update_reservation(id):
 @jwt_required()
 def delete_reservation(id):
     reservation = Reservation.query.get_or_404(id)
+    product_id = reservation.mongo_product_id
     db.session.delete(reservation)
     db.session.commit()
+
+    # Verificar si quedan otras reservas activas para este producto
+    active = Reservation.query.filter(
+        Reservation.mongo_product_id == product_id,
+        Reservation.id != id,
+        Reservation.status.in_(['pending', 'confirmed', 'active'])
+    ).first()
+    new_status = 'disponible' if not active else 'reservado'
+    mongo_db.products.update_one(
+        {"_id": ObjectId(product_id)},
+        {"$set": {"status": new_status}}
+    )
     return jsonify({"message": "Reserva eliminada"}), 200
 
 
