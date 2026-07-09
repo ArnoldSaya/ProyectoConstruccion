@@ -91,4 +91,16 @@ def refresh():
 def get_me():
     user_id = int(get_jwt_identity())
     user = User.query.get_or_404(user_id)
+
+    # Autoasignar 'cliente' si el usuario no tiene ningun rol
+    # (cubre usuarios creados via Google OAuth antes de que existiera esa asignacion)
+    from app.models.user_role import UserRole
+    from app.models.role import Role
+    existing_roles = UserRole.query.filter_by(user_id=user.id).count()
+    if existing_roles == 0:
+        cliente_role = Role.query.filter_by(role_name='cliente').first()
+        if cliente_role:
+            db.session.add(UserRole(user_id=user.id, role_id=cliente_role.id))
+            db.session.commit()
+
     return jsonify(user.to_dict()), 200
