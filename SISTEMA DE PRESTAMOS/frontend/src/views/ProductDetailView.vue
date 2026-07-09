@@ -195,10 +195,17 @@ const ownerEarnings = computed(() => +(computedTotal.value - platformFee.value).
 
 const parsedDetails = computed(() => {
   if (!product.value?.details) return {}
+  const raw = product.value.details
+  if (typeof raw === 'object') return raw
   try {
-    return JSON.parse(product.value.details)
+    return JSON.parse(raw)
   } catch {
-    return { info: product.value.details }
+    // Intenta limpiar el string (comillas simples, espacios, etc.)
+    try {
+      return JSON.parse(raw.replace(/'/g, '"'))
+    } catch {
+      return { info: raw }
+    }
   }
 })
 
