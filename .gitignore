@@ -1,0 +1,23 @@
+# ==================================
+# Python
+# ==================================
+__pycache__/
+*.pyc
+*.pyo
+*.db
+venv/
+
+# Variables de entorno con secretos (NO commitear)
+.env
+
+# ==================================
+# Node / Frontend
+# ==================================
+node_modules/
+dist/
+
+# ==================================
+# Subidas de usuario (mantener .gitkeep)
+# ==================================
+backend/app/static/uploads/products/*
+!backend/app/static/uploads/products/.gitkeep
