@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, send_from_directory
 from flask_cors import CORS
 from werkzeug.middleware.proxy_fix import ProxyFix   # <-- NUEVO
 from .config import Config
@@ -27,11 +27,14 @@ def create_app():
 
     # ==================================
     # CORS (permite peticiones del frontend Vue en otro origen)
+    # Cuando frontend y backend comparten dominio se agrega tambien
+    # la URL del backend como origen valido (same-origin en Render).
     # ==================================
+    allowed_origins = list({app.config['FRONTEND_URL'], app.config['BACKEND_URL']})
     CORS(
         app,
         supports_credentials=True,
-        origins=[app.config['FRONTEND_URL']]
+        origins=allowed_origins
     )
 
     # ==================================
@@ -144,5 +147,28 @@ def create_app():
         # MOSTRAR RUTAS
         # ==================================
         print(app.url_map)
+
+        # ==================================
+        # SPA FALLBACK: sirve el index.html de Vue para cualquier
+        # ruta que no sea /api/** ni /static/**.
+        # Esto permite que Vue Router maneje rutas como /oauth-callback,
+        # /login, /perfil, etc. cuando frontend y backend comparten dominio.
+        # ==================================
+        spa_dist = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'dist')
+
+        @app.route('/', defaults={'path': ''})
+        @app.route('/<path:path>')
+        def serve_spa(path):
+            """Sirve el SPA de Vue. Rutas /api/ y /static/ son manejadas antes por Flask."""
+            # Si existe el archivo exacto en dist, servirlo (assets JS/CSS/img)
+            requested = os.path.join(spa_dist, path)
+            if path and os.path.isfile(requested):
+                return send_from_directory(spa_dist, path)
+            # Para cualquier otra ruta (incluyendo /oauth-callback), devolver index.html
+            index = os.path.join(spa_dist, 'index.html')
+            if os.path.isfile(index):
+                return send_from_directory(spa_dist, 'index.html')
+            # Si aun no se ha hecho el build del frontend, mensaje claro
+            return '<h2>Frontend no encontrado. Ejecuta: cd frontend && npm run build</h2>', 404
 
     return app
