@@ -10,6 +10,15 @@
         <span class="badge" :class="product.status">{{ product.status }}</span>
         <h1>{{ product.name_prod }}</h1>
         <p class="price price-lg">S/ {{ formatPrice(product.price) }}</p>
+        <button
+          v-if="auth.isAuthenticated"
+          type="button"
+          class="fav-toggle"
+          :class="{ active: fav.isFavorite(product._id) }"
+          @click="toggleFav"
+        >
+          {{ fav.isFavorite(product._id) ? '❤️ En favoritos' : '🤍 Agregar a favoritos' }}
+        </button>
         <div class="product-description">
           <h4>Descripción</h4>
           <p>{{ product.description }}</p>
@@ -114,10 +123,12 @@ import { onMounted, reactive, ref, computed, watch } from 'vue'
 import { getProduct } from '../services/products'
 import { createReservation } from '../services/reservations'
 import { useAuthStore } from '../stores/auth'
+import { useFavoritesStore } from '../stores/favorites'
 
 const props = defineProps({ id: { type: String, required: true } })
 
 const auth = useAuthStore()
+const fav = useFavoritesStore()
 const product = ref(null)
 const loading = ref(true)
 const error = ref('')
@@ -269,6 +280,11 @@ async function loadProduct() {
   }
 }
 
+async function toggleFav() {
+  if (!auth.isAuthenticated) return
+  await fav.toggle(props.id)
+}
+
 async function handleReserve() {
   error.value = ''
   loadingReserve.value = true
@@ -291,7 +307,10 @@ async function handleReserve() {
   }
 }
 
-onMounted(loadProduct)
+onMounted(() => {
+  loadProduct()
+  fav.load()
+})
 </script>
 
 <style scoped>
@@ -410,6 +429,32 @@ onMounted(loadProduct)
   width: 100%;
 }
 .btn-secondary:hover { background: #e2e8f0; }
+
+.fav-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 8px 14px;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  background: #fff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.fav-toggle:hover {
+  border-color: #f43f5e;
+  color: #e11d48;
+  background: #fff1f2;
+}
+.fav-toggle.active {
+  border-color: #f43f5e;
+  color: #e11d48;
+  background: #fff1f2;
+}
 
 .product-description {
   margin-top: 14px;
