@@ -1,0 +1,595 @@
+{
+  "info": {
+    "name": "ProyectoConstruccion API",
+    "description": "Colección completa de endpoints del backend Flask (sistema de préstamos/alquiler). El token JWT se guarda automáticamente al hacer Login o Register, y se usa en todas las demás peticiones vía {{token}}.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://127.0.0.1:5000/api" },
+    { "key": "token", "value": "" },
+    { "key": "refresh_token", "value": "" },
+    { "key": "user_id", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"Esther Chunga\",\n  \"email\": \"esther@test.com\",\n  \"password\": \"123456\",\n  \"phone\": \"973838491\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('token', data.token);",
+                  "  pm.collectionVariables.set('refresh_token', data.refresh_token);",
+                  "  pm.collectionVariables.set('user_id', data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"esther@test.com\",\n  \"password\": \"123456\"\n}"
+            },
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.collectionVariables.set('token', data.token);",
+                  "  pm.collectionVariables.set('refresh_token', data.refresh_token);",
+                  "  pm.collectionVariables.set('user_id', data.user.id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{refresh_token}}" }],
+            "url": { "raw": "{{base_url}}/auth/refresh", "host": ["{{base_url}}"], "path": ["auth", "refresh"] }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  pm.collectionVariables.set('token', pm.response.json().token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Google Login (abrir en navegador)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/auth/google/login", "host": ["{{base_url}}"], "path": ["auth", "google", "login"] },
+            "description": "Este endpoint redirige a Google. No se puede probar como request JSON normal, hay que abrirlo directo en el navegador."
+          }
+        },
+        {
+          "name": "Google Token Exchange (SPA)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"id_token\": \"PEGAR_ID_TOKEN_DE_GOOGLE_AQUI\"\n}" },
+            "url": { "raw": "{{base_url}}/auth/google/token", "host": ["{{base_url}}"], "path": ["auth", "google", "token"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Carlos Vizarreta\",\n  \"email\": \"carlos@test.com\",\n  \"password\": \"123456\",\n  \"phone\": \"999888777\"\n}" },
+            "url": { "raw": "{{base_url}}/users", "host": ["{{base_url}}"], "path": ["users"] }
+          }
+        },
+        {
+          "name": "Get Users",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/users", "host": ["{{base_url}}"], "path": ["users"] }
+          }
+        },
+        {
+          "name": "Get User by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["users", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"full_name\": \"Esther Chunga Actualizada\",\n  \"phone\": \"911222333\"\n}" },
+            "url": { "raw": "{{base_url}}/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["users", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/users/{{user_id}}", "host": ["{{base_url}}"], "path": ["users", "{{user_id}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Roles",
+      "item": [
+        {
+          "name": "Assign Role (a otro usuario)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": {{user_id}},\n  \"role_id\": 2\n}" },
+            "url": { "raw": "{{base_url}}/user-roles", "host": ["{{base_url}}"], "path": ["user-roles"] }
+          }
+        },
+        {
+          "name": "Assign Role to Self (ej. ser rentador)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"role_name\": \"rentador\"\n}" },
+            "url": { "raw": "{{base_url}}/user-roles/self", "host": ["{{base_url}}"], "path": ["user-roles", "self"] }
+          }
+        },
+        {
+          "name": "Remove Role from Self",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"role_name\": \"rentador\"\n}" },
+            "url": { "raw": "{{base_url}}/user-roles/self", "host": ["{{base_url}}"], "path": ["user-roles", "self"] }
+          }
+        },
+        {
+          "name": "Get Roles",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/user-roles", "host": ["{{base_url}}"], "path": ["user-roles"] }
+          }
+        },
+        {
+          "name": "Get User Roles by User ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/user-roles/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["user-roles", "user", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Delete Role Assignment",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/user-roles/1", "host": ["{{base_url}}"], "path": ["user-roles", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products (MongoDB)",
+      "item": [
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name_cat\": \"Herramientas\",\n  \"description\": \"Herramientas de construccion y jardineria\"\n}" },
+            "url": { "raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/categories", "host": ["{{base_url}}"], "path": ["categories"] }
+          }
+        },
+        {
+          "name": "Update Category",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name_cat\": \"Herramientas Electricas\",\n  \"description\": \"Actualizado\"\n}" },
+            "url": { "raw": "{{base_url}}/categories/PEGAR_CATEGORY_ID", "host": ["{{base_url}}"], "path": ["categories", "PEGAR_CATEGORY_ID"] }
+          }
+        },
+        {
+          "name": "Delete Category",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/categories/PEGAR_CATEGORY_ID", "host": ["{{base_url}}"], "path": ["categories", "PEGAR_CATEGORY_ID"] }
+          }
+        },
+        {
+          "name": "Create Product",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"owner_id\": {{user_id}},\n  \"name_prod\": \"Taladro Bosch\",\n  \"description\": \"Taladro percutor profesional\",\n  \"category_id\": \"PEGAR_CATEGORY_ID\",\n  \"price\": 25.50\n}" },
+            "url": { "raw": "{{base_url}}/products", "host": ["{{base_url}}"], "path": ["products"] }
+          }
+        },
+        {
+          "name": "Get Products (con filtros)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/products?page=1&per_page=10",
+              "host": ["{{base_url}}"],
+              "path": ["products"],
+              "query": [{ "key": "page", "value": "1" }, { "key": "per_page", "value": "10" }]
+            }
+          }
+        },
+        {
+          "name": "Get Products by Owner",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/products/owner/{{user_id}}", "host": ["{{base_url}}"], "path": ["products", "owner", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/products/PEGAR_PRODUCT_ID", "host": ["{{base_url}}"], "path": ["products", "PEGAR_PRODUCT_ID"] }
+          }
+        },
+        {
+          "name": "Update Product",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name_prod\": \"Taladro Bosch Pro\",\n  \"price\": 30.00\n}" },
+            "url": { "raw": "{{base_url}}/products/PEGAR_PRODUCT_ID", "host": ["{{base_url}}"], "path": ["products", "PEGAR_PRODUCT_ID"] }
+          }
+        },
+        {
+          "name": "Delete Product",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/products/PEGAR_PRODUCT_ID", "host": ["{{base_url}}"], "path": ["products", "PEGAR_PRODUCT_ID"] }
+          }
+        },
+        {
+          "name": "Upload Product Image",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{ "key": "image", "type": "file", "src": "" }]
+            },
+            "url": { "raw": "{{base_url}}/uploads", "host": ["{{base_url}}"], "path": ["uploads"] }
+          }
+        },
+        {
+          "name": "Test Mongo Connection",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/testmongo", "host": ["{{base_url}}"], "path": ["testmongo"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Create Location",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": {{user_id}},\n  \"location_name\": \"Casa\",\n  \"address\": \"Av. Ejercito 123, Arequipa\",\n  \"latitude\": -16.409047,\n  \"longitude\": -71.537451\n}" },
+            "url": { "raw": "{{base_url}}/locations", "host": ["{{base_url}}"], "path": ["locations"] }
+          }
+        },
+        {
+          "name": "Get Locations",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/locations", "host": ["{{base_url}}"], "path": ["locations"] }
+          }
+        },
+        {
+          "name": "Get User Locations",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/locations/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["locations", "user", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Delete Location",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/locations/1", "host": ["{{base_url}}"], "path": ["locations", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reservations",
+      "item": [
+        {
+          "name": "Create Reservation",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"renter_user_id\": {{user_id}},\n  \"mongo_product_id\": \"PEGAR_PRODUCT_ID\",\n  \"pickup_location_id\": 1,\n  \"start_date\": \"2026-08-01\",\n  \"end_date\": \"2026-08-05\"\n}" },
+            "url": { "raw": "{{base_url}}/reservations", "host": ["{{base_url}}"], "path": ["reservations"] }
+          }
+        },
+        {
+          "name": "Get Reservations",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reservations", "host": ["{{base_url}}"], "path": ["reservations"] }
+          }
+        },
+        {
+          "name": "Get Reservation by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"] }
+          }
+        },
+        {
+          "name": "Get User Reservations",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reservations/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["reservations", "user", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Update Reservation (ej. cambiar status)",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"confirmed\"\n}" },
+            "url": { "raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"] }
+          }
+        },
+        {
+          "name": "Delete Reservation",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/reservations/1", "host": ["{{base_url}}"], "path": ["reservations", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reservation_id\": 1,\n  \"amount\": 102.00,\n  \"payment_method\": \"tarjeta\"\n}" },
+            "url": { "raw": "{{base_url}}/payments", "host": ["{{base_url}}"], "path": ["payments"] }
+          }
+        },
+        {
+          "name": "Get Payments",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/payments", "host": ["{{base_url}}"], "path": ["payments"] }
+          }
+        },
+        {
+          "name": "Get Payment by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/payments/1", "host": ["{{base_url}}"], "path": ["payments", "1"] }
+          }
+        },
+        {
+          "name": "Delete Payment",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/payments/1", "host": ["{{base_url}}"], "path": ["payments", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Invoices",
+      "item": [
+        {
+          "name": "Create Invoice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"payment_id\": 1,\n  \"subtotal\": 100.00,\n  \"platform_fee\": 10.00,\n  \"owner_earnings\": 90.00,\n  \"taxes\": 18.00,\n  \"total\": 128.00\n}" },
+            "url": { "raw": "{{base_url}}/invoices", "host": ["{{base_url}}"], "path": ["invoices"] }
+          }
+        },
+        {
+          "name": "Get Invoices",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/invoices", "host": ["{{base_url}}"], "path": ["invoices"] }
+          }
+        },
+        {
+          "name": "Get Invoice by ID",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/invoices/1", "host": ["{{base_url}}"], "path": ["invoices", "1"] }
+          }
+        },
+        {
+          "name": "Delete Invoice",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/invoices/1", "host": ["{{base_url}}"], "path": ["invoices", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"reservation_id\": 1,\n  \"reviewer_id\": {{user_id}},\n  \"reviewed_user_id\": 2,\n  \"rating\": 5,\n  \"comment\": \"Excelente experiencia, producto en buen estado\"\n}" },
+            "url": { "raw": "{{base_url}}/reviews", "host": ["{{base_url}}"], "path": ["reviews"] }
+          }
+        },
+        {
+          "name": "Get Reviews",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reviews", "host": ["{{base_url}}"], "path": ["reviews"] }
+          }
+        },
+        {
+          "name": "Get User Reviews",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/reviews/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["reviews", "user", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/reviews/1", "host": ["{{base_url}}"], "path": ["reviews", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "item": [
+        {
+          "name": "Add Favorite",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": {{user_id}},\n  \"mongo_product_id\": \"PEGAR_PRODUCT_ID\"\n}" },
+            "url": { "raw": "{{base_url}}/favorites", "host": ["{{base_url}}"], "path": ["favorites"] }
+          }
+        },
+        {
+          "name": "Get Favorites",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/favorites", "host": ["{{base_url}}"], "path": ["favorites"] }
+          }
+        },
+        {
+          "name": "Get User Favorites",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/favorites/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["favorites", "user", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Delete Favorite",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/favorites/1", "host": ["{{base_url}}"], "path": ["favorites", "1"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Points",
+      "item": [
+        {
+          "name": "Add Points",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{token}}" }],
+            "body": { "mode": "raw", "raw": "{\n  \"user_id\": {{user_id}},\n  \"points_earned\": 50,\n  \"reason\": \"Reserva completada\"\n}" },
+            "url": { "raw": "{{base_url}}/points", "host": ["{{base_url}}"], "path": ["points"] }
+          }
+        },
+        {
+          "name": "Get Points",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/points", "host": ["{{base_url}}"], "path": ["points"] }
+          }
+        },
+        {
+          "name": "Get User Points",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/points/user/{{user_id}}", "host": ["{{base_url}}"], "path": ["points", "user", "{{user_id}}"] }
+          }
+        },
+        {
+          "name": "Delete Point",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": { "raw": "{{base_url}}/points/1", "host": ["{{base_url}}"], "path": ["points", "1"] }
+          }
+        }
+      ]
+    }
+  ]
+}
