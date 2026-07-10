@@ -85,6 +85,37 @@ def upload_file_to_drive(user: User, name: str, content, mime_type: str):
     return file.get("id")
 
 
+def upload_public_image_to_drive(user: User, name: str, content, mime_type: str):
+    """
+    Sube una imagen al Google Drive del usuario, la hace publica (para poder
+    incrustarla en <img>) y devuelve (file_id, url_embebible).
+    Requiere que el usuario tenga refresh_token de Google (login con Google).
+    """
+    service = get_drive_service(user)
+    file_metadata = {"name": name}
+    from googleapiclient.http import MediaIoBaseUpload
+    import io
+    if isinstance(content, (bytes, str)):
+        content = io.BytesIO(
+            content.encode() if isinstance(content, str) else content
+        )
+    media = MediaIoBaseUpload(content, mimetype=mime_type)
+    file = service.files().create(
+        body=file_metadata, media_body=media, fields="id"
+    ).execute()
+    file_id = file.get("id")
+
+    # Hacer el archivo publico para que sea visible en <img src>
+    service.permissions().create(
+        body={"type": "anyone", "role": "reader"},
+        fileId=file_id,
+        fields="id",
+    ).execute()
+
+    url = f"https://drive.google.com/uc?export=view&id={file_id}"
+    return file_id, url
+
+
 def create_calendar_event(user: User, summary: str, start, end, description=None):
     """Crea un evento en el calendario principal del usuario."""
     service = get_calendar_service(user)

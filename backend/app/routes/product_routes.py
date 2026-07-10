@@ -4,6 +4,7 @@ from bson.objectid import ObjectId
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.models.mongo_models import CategoryModel, ProductModel
+from app.models.user import User
 from app.models.role import Role
 from app.models.user_role import UserRole
 from app import db, mongo_db
@@ -279,8 +280,9 @@ def update_product(product_id):
 def upload_image():
     """
     Sube una foto de producto (multipart/form-data, campo 'file').
-    Guarda el archivo en app/static/uploads/products/ con un nombre unico
-    y devuelve la URL publica para luego guardarla en el producto.
+    Prioriza Google Drive (persistente) si el usuario inicio sesion con Google;
+    si no tiene cuenta de Google, hace fallback a disco local del backend.
+    Devuelve la URL publica para guardarla en el producto.
     """
     if 'file' not in request.files:
         return error_response("No se envio ningun archivo (campo 'file')", 400)
@@ -297,20 +299,38 @@ def upload_image():
         )
 
     filename = uuid.uuid4().hex + "." + ext
-    upload_folder = current_app.config['UPLOAD_FOLDER']
-    os.makedirs(upload_folder, exist_ok=True)
-    file.save(os.path.join(upload_folder, filename))
+    mime = file.mimetype or 'image/jpeg'
+    user = User.query.get(int(get_jwt_identity()))
 
-    relative_url = "/static/uploads/products/" + filename
-    # URL absoluta basada en el host real que usó el navegador (no depende de
-    # BACKEND_URL, que puede no estar configurado en Render).
-    full_url = request.url_root.rstrip('/') + relative_url
+    # 1) Intentar Google Drive (persistente en la nube)
+    try:
+        from app.google_api import upload_public_image_to_drive
+        data = file.read()
+        file_id, drive_url = upload_public_image_to_drive(user, filename, data, mime)
+        return jsonify({
+            "message": "Imagen subida (Google Drive)",
+            "url": drive_url,
+            "drive_file_id": file_id,
+            "storage": "drive"
+        }), 201
+    except Exception as e:
+        # 2) Fallback: disco local del backend (efemero en Render)
+        current_app.logger.warning(f"Upload a Drive fallo, usando disco local: {e}")
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        file.seek(0)
+        file.save(os.path.join(upload_folder, filename))
 
-    return jsonify({
-        "message": "Imagen subida",
-        "url": full_url,
-        "path": relative_url
-    }), 201
+        relative_url = "/static/uploads/products/" + filename
+        # URL absoluta basada en el host real que usó el navegador.
+        full_url = request.url_root.rstrip('/') + relative_url
+
+        return jsonify({
+            "message": "Imagen subida (disco local)",
+            "url": full_url,
+            "path": relative_url,
+            "storage": "local"
+        }), 201
 
 
 @product_bp.route("/testmongo")
