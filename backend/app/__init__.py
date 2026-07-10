@@ -1,6 +1,7 @@
 import os
 from flask import Flask
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix   # <-- NUEVO
 from .config import Config
 from app.models import db
 from app.oauth import init_oauth
@@ -18,6 +19,16 @@ def create_app():
 
     app = Flask(__name__)
     app.config.from_object(Config)
+
+    # ==================================
+    # CONFIAR EN EL REVERSE PROXY DE RENDER
+    # ==================================
+    # Render (como Heroku/Railway) pone tu app detras de un proxy que
+    # termina el HTTPS y le habla a Flask por dentro. Sin esto, Flask
+    # puede leer/escribir la cookie de sesion de forma inconsistente
+    # entre /google/login y /google/callback, provocando el error
+    # "MismatchingStateError: CSRF Warning! State not equal" de Authlib.
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
     # Asegurar que exista la carpeta de subida de imagenes de productos
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
