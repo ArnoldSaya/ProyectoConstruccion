@@ -17,7 +17,7 @@ class User(db.Model):
     # Datos de Google OAuth
     google_id = db.Column(db.String(64), unique=True, nullable=True)
     avatar_url = db.Column(db.String(500), nullable=True)
-    auth_provider = db.Column(db.String(20), nullable=False, default='google')
+    auth_provider = db.Column(db.String(20), nullable=False, default='email')
     google_refresh_token = db.Column(db.Text, nullable=True)
 
     reputation_score = db.Column(db.Numeric(3, 2), default=5.00)

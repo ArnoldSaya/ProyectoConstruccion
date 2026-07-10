@@ -29,7 +29,8 @@ def register():
     user = User(
         full_name=data['full_name'],
         email=data['email'],
-        phone=data.get('phone')
+        phone=data.get('phone'),
+        auth_provider='email'
     )
     user.set_password(data['password'])
     db.session.add(user)
