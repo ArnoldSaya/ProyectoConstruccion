@@ -3,13 +3,13 @@ services:
     name: construccionfinal
     runtime: python
     rootDir: backend
-    buildCommand: |
-      pip install -r requirements.txt && \
-      cd ../frontend && npm install && npm run build
+    buildCommand: chmod +x build.sh && ./build.sh
     startCommand: gunicorn run:app --workers 2 --bind 0.0.0.0:$PORT --timeout 120
     envVars:
       - key: PYTHON_VERSION
         value: "3.11.0"
+      - key: NODE_VERSION
+        value: "20.11.0"
       - key: FRONTEND_URL
         sync: false
       - key: BACKEND_URL
