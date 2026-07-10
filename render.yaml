@@ -4,8 +4,11 @@ services:
     name: construccionfinal
     runtime: python
     rootDir: backend
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r requirements.txt && cd ../frontend && npm install && npm run build
     startCommand: gunicorn run:app --workers 2 --bind 0.0.0.0:$PORT --timeout 120
+    envVars:
+      - key: FRONTEND_URL
+        value: https://construccionfinal.onrender.com
 
   # ===== FRONTEND (Vue / Static Site) =====
   - type: web

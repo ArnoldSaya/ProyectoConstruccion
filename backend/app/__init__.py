@@ -86,6 +86,7 @@ def create_app():
         from .routes.payment_routes import payment_bp
         from .routes.review_routes import review_bp
         from .routes.point_routes import point_bp
+        from .routes.static_routes import static_bp
 
         # ==================================
         # REGISTRAR BLUEPRINTS
@@ -102,6 +103,14 @@ def create_app():
         app.register_blueprint(payment_bp, url_prefix='/api')
         app.register_blueprint(review_bp, url_prefix='/api')
         app.register_blueprint(point_bp, url_prefix='/api')
+
+        # ==================================
+        # SPA FALLBACK (DEBE SER EL ULTIMO)
+        # Sirve el frontend construido (frontend/dist/index.html) para
+        # cualquier ruta GET que no sea /api, permitiendo recargas directas
+        # de rutas client-side como /oauth-callback (evita 404 de Google).
+        # ==================================
+        app.register_blueprint(static_bp)
 
         # ==================================
         # CREAR TABLAS SI NO EXISTEN
