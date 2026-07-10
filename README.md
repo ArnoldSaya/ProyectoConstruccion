@@ -92,6 +92,26 @@ Variables de entorno del frontend (`frontend/.env`):
 | `VITE_API_URL` | Base URL de la API (ej. `http://127.0.0.1:5000/api` en local) |
 
 ---
+## Base de datos en producción
+
+El proyecto usa **dos proveedores cloud separados**, uno por cada base de datos:
+
+### PostgreSQL — Supabase
+- **Proveedor:** [Supabase](https://supabase.com)
+- **Proyecto:** `fzqmdofscxxdphuykwvu`
+- **Uso:** almacena todas las tablas relacionales — `users`, `roles`, `user_role`, `reservations`, `payments`, `invoices`, `locations`, `favorites`, `points`, `reviews`.
+- **Conexión:** vía `DATABASE_URL` en `backend/app/.env`, apuntando al connection string de Supabase (Settings → Database → Connection string).
+- **Acceso al panel:** Supabase Dashboard → Table Editor (para ver filas) o SQL Editor (para correr queries directo) — útil para mostrarle al profesor los datos reales sin pasar por Postman.
+
+### MongoDB — MongoDB Atlas
+- **Proveedor:** [MongoDB Atlas](https://cloud.mongodb.com)
+- **Base de datos:** `prestamos_db`
+- **Colecciones:** `categories` y `products` (catálogo).
+- **Conexión:** vía `MONGO_URI` en `backend/app/.env`.
+- **Acceso al panel:** Atlas → Database → Browse Collections → `prestamos_db` → `categories` / `products`, para mostrar en vivo los documentos guardados (por ejemplo, después de publicar un producto desde la app, refrescar el Explorer y verlo aparecer ahí).
+
+### Por qué separados 
+Ambos son servicios **gestionados (managed) en la nube**, gratuitos en su tier básico, y se eligieron independientemente el uno del otro porque cada base cumple un rol distinto en la arquitectura híbrida: Supabase da Postgres con integridad referencial para lo transaccional, y Atlas da Mongo sin esquema fijo para el catálogo. Ninguno de los dos "sabe" del otro — la única conexión entre ambos la hace el backend en código (ej. `owner_id` en un documento de Mongo apunta a un `id` de la tabla `users` en Supabase, pero se valida manualmente en el endpoint, no por una foreign key real).
 
 ## Configuración de Google OAuth 2.0
 
