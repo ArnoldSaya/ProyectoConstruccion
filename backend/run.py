@@ -1,5 +1,5 @@
 from app import create_app
-
+app.config["PREFERRED_URL_SCHEME"] = "https"
 app = create_app()
 
 if __name__ == '__main__':
