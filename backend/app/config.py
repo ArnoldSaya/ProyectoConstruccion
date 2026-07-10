@@ -74,7 +74,7 @@ class Config:
     # ==================================
     SESSION_COOKIE_NAME = 'session'
     SESSION_COOKIE_HTTPONLY = True
-    SESSION_COOKIE_SAMESITE = 'Lax'
+    SESSION_COOKIE_SAMESITE = 'None'
     SESSION_COOKIE_SECURE = True     # Poner True en produccion (requiere HTTPS)
 
     # ==================================
