@@ -112,6 +112,56 @@ Variables de entorno del frontend (`frontend/.env`):
    el usuario, emite JWT propios) → redirige a
    `{FRONTEND_URL}/oauth-callback?token=...&refresh=...` → Vue completa la sesión.
 
+> **Nota (Render):** el `redirect_uri` y el origen del frontend se derivan de la
+> propia petición (`request.url_root` / `session`), por lo que **no dependen** de
+> las variables `BACKEND_URL`/`FRONTEND_URL`. La única condición es que la
+> **Authorized redirect URI** en Google Cloud Console coincida exactamente con
+> `https://<backend>.onrender.com/api/auth/google/callback`.
+
+### Archivos que recorre el flujo OAuth
+
+**Frontend (Vue)**
+| Orden | Archivo | Líneas | Rol |
+|-------|---------|--------|-----|
+| 1 | `frontend/src/views/LoginView.vue` | 47–50 | Botón "Continuar con Google" → `window.location.href = VITE_API_URL + /auth/google/login` |
+| 2 | `frontend/src/router/index.js` | 8 | Ruta `/oauth-callback` → `OAuthCallbackView` (cuando Google redirige de vuelta) |
+| 3 | `frontend/src/views/OAuthCallbackView.vue` | 25–40 | Lee `?token` y `?refresh` de la URL, llama `auth.loginWithToken()` |
+| 4 | `frontend/src/stores/auth.js` | 36–46 | `loginWithToken()` guarda tokens y `fetchMe()` pide `GET /auth/me` |
+| 5 | `frontend/src/services/api.js` | 10–20 | Interceptor adjunta `Authorization: Bearer` en cada llamada |
+
+**Backend (Flask)**
+| Orden | Archivo | Líneas | Rol |
+|-------|---------|--------|-----|
+| 1 | `backend/app/routes/google_auth_routes.py` | 27–46 | `google_login()`: arma `redirect_uri` desde `request.url_root`, guarda origen del frontend en `session`, llama `oauth.google.authorize_redirect()` |
+| 2 | `backend/app/oauth.py` | 23–35 | `init_oauth()`: registra cliente Google (client_id/secret, scopes Drive/Calendar/Gmail, `offline`) |
+| 3 | `backend/app/config.py` | 37–47, 67–70 | Lee `GOOGLE_CLIENT_ID/SECRET` y `BACKEND_URL`/`FRONTEND_URL` (solo fallback) |
+| 4 | `backend/app/routes/google_auth_routes.py` | 49–97 | `google_callback()`: `authorize_access_token()`, `get_or_create_from_google()`, emite JWT, redirige a `frontend/oauth-callback?token=&refresh=` |
+| 5 | `backend/app/models/user.py` | 49–89 | `get_or_create_from_google()`: busca/crea usuario por `google_id` o `email`, asigna rol `cliente` |
+| 6 | `backend/app/routes/google_auth_routes.py` | 11–15 | `_issue_tokens()`: `create_access_token` + `create_refresh_token` (Flask-JWT-Extended) |
+| 7 | `backend/app/routes/auth_routes.py` | 89–106 | `GET /auth/me`: valida el JWT y devuelve el usuario (usado por `fetchMe`) |
+| 8 | `backend/app/__init__.py` | 40, 50, 113 | `JWTManager(app)`, `init_oauth(app)`, registro de `google_auth_bp` (y `static_bp` para servir el SPA en `/oauth-callback`) |
+
+**Secuencia**
+```
+LoginView.vue (click)
+  → GET /api/auth/google/login
+  → google_auth_routes.py:google_login   (redirect_uri = request.host)
+  → oauth.py (cliente Google)
+  → Google (consentimiento)
+  → GET /api/auth/google/callback
+  → google_auth_routes.py:google_callback
+       → user.py:get_or_create_from_google
+       → _issue_tokens (JWT)
+       → redirect → frontend/oauth-callback?token=&refresh=
+  → router/index.js (/oauth-callback)
+  → OAuthCallbackView.vue
+       → stores/auth.js:loginWithToken → fetchMe
+       → auth_routes.py:/me
+  → usuario logueado
+```
+El nexo entre ambos lados es el **JWT** que viaja en la URL (`?token=`) y luego se
+usa como `Bearer` en `api.js`.
+
 ---
 
 ## Estructura del backend
