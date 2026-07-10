@@ -302,7 +302,9 @@ def upload_image():
     file.save(os.path.join(upload_folder, filename))
 
     relative_url = "/static/uploads/products/" + filename
-    full_url = current_app.config['BACKEND_URL'] + relative_url
+    # URL absoluta basada en el host real que usó el navegador (no depende de
+    # BACKEND_URL, que puede no estar configurado en Render).
+    full_url = request.url_root.rstrip('/') + relative_url
 
     return jsonify({
         "message": "Imagen subida",
