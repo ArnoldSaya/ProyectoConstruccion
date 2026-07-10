@@ -10,7 +10,10 @@
         <span class="badge" :class="product.status">{{ product.status }}</span>
         <h1>{{ product.name_prod }}</h1>
         <p class="price price-lg">S/ {{ formatPrice(product.price) }}</p>
-        <p>{{ product.description }}</p>
+        <div class="product-description">
+          <h4>Descripción</h4>
+          <p>{{ product.description }}</p>
+        </div>
         <div v-if="product.details" class="product-details">
           <h4>Detalles</h4>
           <ul>
@@ -407,6 +410,26 @@ onMounted(loadProduct)
   width: 100%;
 }
 .btn-secondary:hover { background: #e2e8f0; }
+
+.product-description {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #e2e8f0;
+}
+.product-description h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+}
+.product-description p {
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.65;
+  white-space: pre-line;
+  word-break: break-word;
+}
 
 .product-details {
   margin-top: 12px;
