@@ -31,18 +31,27 @@ def google_login():
     Pensado para ser abierto directamente en el navegador (flujo de
     redireccion completo, boton "Continuar con Google" en el frontend).
 
-    El redirect_uri se arma a partir de BACKEND_URL (config fija), NO con
-    url_for(..., _external=True), porque ese ultimo depende de con que
-    host/puerto exacto el navegador llamo a esta ruta (127.0.0.1 vs
-    localhost, por ejemplo) y eso puede no coincidir con lo registrado en
-    Google Cloud Console, causando el error 400: redirect_uri_mismatch.
+    El redirect_uri se deriva del host real que uso el navegador
+    (request.url_root), por lo que funciona en Render sin depender de
+    BACKEND_URL. Debe coincidir EXACTAMENTE con lo registrado en Google
+    Cloud Console (ej. https://<backend>.onrender.com/api/auth/google/callback).
 
-    NOTA: En Render (entorno con posibles multiples instancias o cookies
-    de sesion inestables) usamos nonce=False y state=False para evitar
-    MismatchingStateError. La seguridad CSRF se delega al parametro
-    redirect_uri fijo registrado en Google Cloud Console.
+    En Render usamos nonce=False y state=False para evitar
+    MismatchingStateError (cookies de sesion inestables entre instancias).
+    La seguridad CSRF se delega al redirect_uri registrado en Google.
+    El origen del frontend se guarda en session para redirigir de vuelta.
     """
-    redirect_uri = f"{current_app.config['BACKEND_URL']}/api/auth/google/callback"
+    # redirect_uri derivado del host real que usó el navegador (funciona en
+    # Render sin depender de BACKEND_URL). Debe coincidir EXACTAMENTE con lo
+    # registrado en Google Cloud Console.
+    redirect_uri = request.url_root.rstrip('/') + '/api/auth/google/callback'
+
+    # Guardar el origen del frontend para redirigir de vuelta tras el login
+    # (evita depender de FRONTEND_URL en el entorno).
+    origin = request.referrer or current_app.config.get('FRONTEND_URL')
+    if origin:
+        session['oauth_frontend_origin'] = origin.rstrip('/')
+
     return oauth.google.authorize_redirect(redirect_uri, _state=False, nonce=False)
 
 
@@ -61,7 +70,8 @@ def google_callback():
     y el callback (instancias efimeras, SameSite=None bloqueado, etc.).
     Se captura y se reintenta la validacion del token sin state check.
     """
-    frontend_url = current_app.config['FRONTEND_URL']
+    # Origen del frontend: el que inició el login (session) o FRONTEND_URL como fallback.
+    frontend_url = session.pop('oauth_frontend_origin', None) or current_app.config.get('FRONTEND_URL')
     try:
         token = oauth.google.authorize_access_token()
     except MismatchingStateError:
