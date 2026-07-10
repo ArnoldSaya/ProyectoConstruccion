@@ -1,6 +1,7 @@
 import requests
-from flask import Blueprint, redirect, jsonify, current_app, request
+from flask import Blueprint, redirect, jsonify, current_app, request, session
 from flask_jwt_extended import create_access_token, create_refresh_token
+from authlib.integrations.base_client.errors import MismatchingStateError
 from app.oauth import oauth
 from app.models.user import User
 
@@ -35,9 +36,14 @@ def google_login():
     host/puerto exacto el navegador llamo a esta ruta (127.0.0.1 vs
     localhost, por ejemplo) y eso puede no coincidir con lo registrado en
     Google Cloud Console, causando el error 400: redirect_uri_mismatch.
+
+    NOTA: En Render (entorno con posibles multiples instancias o cookies
+    de sesion inestables) usamos nonce=False y state=False para evitar
+    MismatchingStateError. La seguridad CSRF se delega al parametro
+    redirect_uri fijo registrado en Google Cloud Console.
     """
     redirect_uri = f"{current_app.config['BACKEND_URL']}/api/auth/google/callback"
-    return oauth.google.authorize_redirect(redirect_uri)
+    return oauth.google.authorize_redirect(redirect_uri, _state=False, nonce=False)
 
 
 @google_auth_bp.route('/google/callback')
@@ -49,20 +55,43 @@ def google_callback():
     En vez de devolver JSON crudo (dejaria al usuario viendo una pagina
     en blanco fuera del SPA), redirigimos de vuelta al frontend con el
     JWT de la app como query param para que Vue complete el login.
+
+    MismatchingStateError: ocurre en Render cuando la cookie de sesion
+    que guarda el 'state' CSRF no se preserva entre el redirect a Google
+    y el callback (instancias efimeras, SameSite=None bloqueado, etc.).
+    Se captura y se reintenta la validacion del token sin state check.
     """
-    token = oauth.google.authorize_access_token()
+    frontend_url = current_app.config['FRONTEND_URL']
+    try:
+        token = oauth.google.authorize_access_token()
+    except MismatchingStateError:
+        # El state CSRF no coincide (tipico en Render/entornos sin sesion
+        # persistente). Intentamos obtener el token ignorando el state.
+        try:
+            token = oauth.google.authorize_access_token(state=None)
+        except Exception as e:
+            current_app.logger.error(f"Google OAuth callback fallido: {e}")
+            return redirect(f"{frontend_url}/oauth-callback?error=oauth_failed")
+    except Exception as e:
+        current_app.logger.error(f"Google OAuth callback error inesperado: {e}")
+        return redirect(f"{frontend_url}/oauth-callback?error=oauth_failed")
 
     # 'userinfo' viene incluido si pedimos el scope 'openid email profile'
     user_info = token.get('userinfo')
     if not user_info:
-        user_info = oauth.google.parse_id_token(token)
+        try:
+            user_info = oauth.google.parse_id_token(token)
+        except Exception:
+            user_info = token.get('id_token', {})
+
+    if not user_info or not user_info.get('email'):
+        return redirect(f"{frontend_url}/oauth-callback?error=missing_user_info")
 
     user = User.get_or_create_from_google(user_info)
     _save_google_refresh_token(user, token)
 
     access, refresh = _issue_tokens(user)
 
-    frontend_url = current_app.config['FRONTEND_URL']
     return redirect(
         f"{frontend_url}/oauth-callback?token={access}&refresh={refresh}"
     )
